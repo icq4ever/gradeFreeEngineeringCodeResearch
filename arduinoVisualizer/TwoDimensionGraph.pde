@@ -1,15 +1,14 @@
 class TwoDimensionGraph {
     int numberOfBuffer = 800;
     float[] buffer = new float[numberOfBuffer];
-    float x, centerY;
+    
     float w, h;
     float max, min, base;
     String title;
     float data;
 
-    TwoDimensionGraph(String _title, float _x, float _centerY, float _w, float _h, float _min, float _max) {
-        x = _x;
-        centerY = _centerY;
+    TwoDimensionGraph(String _title, float _w, float _h, float _min, float _max) {
+        
         w = _w;
         h = _h;
         min = _min;
@@ -34,22 +33,22 @@ class TwoDimensionGraph {
     }
 
 
-    void draw() {
+    void draw(float _x, float _centerY) {
         //title
         pushStyle();
         fill(255, 255, 0);
         noStroke();
-        rect(x, centerY - h/2, 100, 20);
+        rect(_x, _centerY - h/2, 100, 20);
         fill(0);
         
-        text(title + " : " + data, x + 10, centerY - h/2 + 14);
+        text(title + " : " + data, _x + 10, _centerY - h/2 + 14);
         popStyle();
         
         pushStyle();
         stroke(255, 255, 255);
         noFill();
         pushMatrix();
-        translate(x, centerY);
+        translate(_x, _centerY);
         line(0, -h/2, 0, h/2);
         line(0, 0, w, 0);
         
