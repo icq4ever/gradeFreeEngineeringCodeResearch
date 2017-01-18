@@ -50,7 +50,7 @@ class TwoDimensionGraph {
         pushMatrix();
         translate(_x, _centerY);
         line(0, -h/2, 0, h/2);
-        line(0, 0, w, 0);
+        line(0, 0, numberOfBuffer, 0);
         
         pushStyle();
         stroke(255, 255, 0);

@@ -1,14 +1,19 @@
+import processing.serial.*;
 
 GForceVis gVis;
 TwoDimensionGraph XVis;
 TwoDimensionGraph YVis;
 float GFMin, GFMax;
+
 float sensorX, sensorY;
+boolean buttonState = false;
 
 boolean cont;
 
 TimeTemplate clock;
 ShootHistoryBook shootLog;
+
+Serial port;
 
 // todo : export to json for check lately
 
@@ -30,14 +35,21 @@ void setup() {
     YVis = new TwoDimensionGraph("Y-AXIS", 550, 300, 384, 640);
 
     cont = true;
+
+    port = new Serial(this, Serial.list()[1], 115200);
+    port.bufferUntil('\n');
 }
 
 void draw() {
     // demonstration of arduino sensor value
-    sensorX = randomGaussian() * 10 + 512;
-    sensorY = randomGaussian() * 10 + 512;
+
+    // disable generate random value 
+    // go to SerialEvent function
+    // sensorX = randomGaussian() * 10 + 512;
+    //sensorY = randomGaussian() * 10 + 512;
 
     if (cont)    pushData(sensorX, sensorY);
+    if(buttonState) review();
 
     background(10, 10, 10);
     gVis.draw(250, 200);
@@ -54,6 +66,7 @@ void draw() {
             text(shootLog.timeStamp.get(i), 40, 400+i*18);
             fill(0, 255, 0);
             text(shootLog.history.get(i).x, 200, 400+i*18);
+            text(shootLog.history.get(i).y, 280, 400+i*18);
             popStyle();
         }
     }
@@ -66,7 +79,7 @@ void pushData(float _dataX, float _dataY) {
     YVis.pushData(data.y);
 }
 
-void mousePressed() {
+void review(){
     if (cont) {
         PVector _t = new PVector(sensorX, sensorY);
         String _now = clock.getDateTime();
@@ -81,5 +94,24 @@ void mousePressed() {
 void keyPressed() {
     if (key == 'c' || key == 'C') {
         cont = true;
+    }
+}
+
+// Serial Event
+void serialEvent(Serial port){
+    String inString = port.readStringUntil('\n');
+    
+    
+    if(inString != null){
+        inString = trim(inString);
+        String[] values = inString.split(","); 
+
+        // 
+        
+        if(int(values[0])==1)   buttonState = true;
+        else                    buttonState = false;
+        
+        sensorX = float(values[1]);
+        sensorY = float(values[2]);
     }
 }
