@@ -17,9 +17,6 @@ controlModuleButtonStatus[7]=PIN_NOODLE_UP;
 controlModuleButtonStatus[8]=PIN_NOODLE_DOWN;
 */
 
-// UIFont
-PFont displayCheckFont;
-
 boolean bStart = false;
 boolean bHeatingMBallOn = false;
 boolean bReleaseMBall = false;
@@ -27,7 +24,7 @@ boolean bEggBreak = false;
 
 float startTimer = 0;
 
-int remoteModuleMessage[] = new int[7];
+int remoteModuleMessage[7];
 
 public static final char NOODLE_CTRL_HEADER = 'N';
 
@@ -48,11 +45,8 @@ void setup(){
 	}
 
 
-	// load Font
-	displayCheckFont = loadFont("Hack-Bold-120.vlw");
-
 	// init message
-	for(int i=0; i<remoteModuleMessage.length; i++){
+	for(int i=0; i<sizeof(remoteModuleMessage)/sizeof(remoteModuleMessage[0]; i++){
 		remoteModuleMessage[i] = 0;
 	}
 }
@@ -69,56 +63,25 @@ void draw(){
 	 if(bStart){
 	 	updateRemoteModuleMessage();
 	 }
-
-	 drawScreen1(0, 0);
-	 drawScreen2(1920, 0);
-}
-
-void drawScreen1(float _x, float _y){
-	pushMatrix();
-	pushStyle();
-	fill(10);
-	rect(0, 0, 1920, 1080);
-	translate(_x, _y);
-	textAlign(CENTER, CENTER);
-	textFont(displayCheckFont);
-	fill(255);
-	text("1", width/4, height/2);
-	popStyle();
-	popMatrix();
-}
-
-void drawScreen2(float _x, float _y){
-	pushMatrix();
-	pushStyle();
-	fill(10);
-	rect(0, 0, 1920, 1080);
-	translate(_x, _y);
-	textAlign(CENTER, CENTER);
-	textFont(displayCheckFont);
-	fill(255);
-	text("2", width/4, height/2);
-	popStyle();
-	popMatrix();
 }
 
 void updateRemoteModuleMessage(){
 	// noodle Cooling
 	for(int i=0; i=3; i++){
-		if(controlModuleButtonStatus[i+1])		remoteModuleMessage[i] = 1;
+		if(numberOfControlModuleButton[i+1])	remoteModuleMessage[i] = 1;
 		else 									remoteModuleMessage[i] = 0;
 	}
 
 	// ball heating
-	if(controlModuleButtonStatus[4])			remoteModuleMessage[3] = 1;
+	if(numberOfControlModuleButton[4])			remoteModuleMessage[3] = 1;
 	else 										retmoeModuleMessage[3] = 0;
 
 	// ball release
-	if(controlModuleButtonStatus[5])			remoteModuleMessage[4] = 1;
+	if(numberOfControlModuleButton[5])			remoteModuleMessage[4] = 1;
 	else 										retmoeModuleMessage[4] = 0;
 
 	// egg breaking
-	if(controlModuleButtonStatus[6])			remoteModuleMessage[5] = 1;
+	if(numberOfControlModuleButton[6])			remoteModuleMessage[5] = 1;
 	else 										retmoeModuleMessage[5] = 0;
 
 	// 
@@ -156,7 +119,7 @@ void serialEvent(Serial port){
 			String[] values = inString.split(",");
 
 			for(int i=0; i<numberOfControlModuleButton; i++){
-				if(unhex(values[i])==1)	controlModuleButtonStatus[i] = true;
+				if(unhex(values[i]==1)	controlModuleButtonStatus[i] = true;
 				else 					controlModuleButtonStatus[i] = false;
 			}
 		}

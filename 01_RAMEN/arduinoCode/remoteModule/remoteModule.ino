@@ -144,5 +144,6 @@ void GFEAnalogWrite(int _pin, int _out)	{
 
 
 void serialEvent(){
-
+	// TODO : send thermal degree to processing
+	
 }
