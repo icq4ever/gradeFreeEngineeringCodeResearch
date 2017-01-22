@@ -47,7 +47,6 @@
 #define NUM_OF_INPUT		10
 #define NUM_OF_MESSAGE		8
 
-
 // ==============================================================
 // LoRa SETTING
 #define RFM95_CS	8
@@ -109,12 +108,6 @@ void loop() {
 	updateActionMessage();
 	sendToActionBoard();
 }
-
-// sudo function definition
-bool GFEDigitalRead(int _pin)					{ return digitalRead(_pin);	}
-int  GFEAnalogRead(int _pin)					{ return analogRead(_pin);	}
-void GFEDigitalWrite(int _pin, bool _out)		{ digitalWrite(_pin, _out); }
-void GFEAnalogWrite(int _pin, int _out)			{ analogWrite(_pin, _out);	}
 
 void initLoRa(){
 	Serial.println("Feather LoRa RX Test!");
@@ -180,7 +173,7 @@ void sendToActionBoard(){
 	digitalWrite(PIN_LED, HIGH);
 	String tempStr = String("");
 	tempStr+="M: ";
-	for(int i=0; i<sizeof(actionMessage)-1; i++){
+	for(int i=0; i<sizeof(actionMessage)/ sizeof(actionMessage[0])-1; i++){
 		tempStr+=actionMessage[i];
 		tempStr+=", "; 
 	}
