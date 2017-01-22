@@ -49,9 +49,9 @@
 
 // ==============================================================
 // LoRa SETTING
-#define RFM95_CS	8
-#define RFM95_RST	4
-#define RFM95_INT	7
+#define RFM95_CS			8
+#define RFM95_RST			4
+#define RFM95_INT			7
 
 // LoRa FREQ SETTING
 #define RF95_FREQ			433.0
@@ -63,7 +63,7 @@
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
 int 	inputPinList[NUM_OF_INPUT];
-bool 	inputBtnStatus[NUM_OF_INPUT];
+int 	inputBtnStatus[NUM_OF_INPUT];
 int 	actionMessage[NUM_OF_MESSAGE];
 char	sendBuffer[SEND_BUFFER_SIZE];
 
@@ -110,7 +110,7 @@ void loop() {
 }
 
 void initLoRa(){
-	Serial.println("Feather LoRa RX Test!");
+	Serial.println("Feather LoRa TX Test!");
 
 	manualLoRaReset();
 
@@ -138,10 +138,10 @@ void initLoRa(){
 int generateServoDirectionFlag(){
 	// UP/DOWN all pressed or nothing pressed
 	if(inputBtnStatus[inputPinList[8]] && inputBtnStatus[inputList[9]] || !inputBtnStatus[inputPinList[8]] && !inputBtnStatus[inputList[9]]){
-		return 0;	// STOP
+		return 2;	// STOP
 	} else {
 		if(inputBtnStatus[inputPinList[8]])		return 1;	// up pressed : RIGHT
-		else 									return -1;	// down pressed : LEFT
+		else 									return 3;	// down pressed : LEFT
 	}
 }
 
@@ -166,14 +166,15 @@ void updateActionMessage(){
 		else					actionMessage[i] = 0;
 	}
 
-	inputBtnStatus[NUM_OF_MESSAGES-1] = generateServoDirectionFlag();
+	actionMessage[NUM_OF_MESSAGES-1] = generateServoDirectionFlag();
 }
 
 void sendToActionBoard(){
 	digitalWrite(PIN_LED, HIGH);
 	String tempStr = String("");
-	tempStr+="M: ";
-	for(int i=0; i<sizeof(actionMessage)/ sizeof(actionMessage[0])-1; i++){
+	// tempStr+="M: ";
+	tempStr+="/";
+	for(int i=0; i<[NUM_OF_MESSAGE]; i++){
 		tempStr+=actionMessage[i];
 		tempStr+=", "; 
 	}
@@ -182,12 +183,19 @@ void sendToActionBoard(){
 
 	rf95.send((uint8_t *)sendBuffer, tempStr.length());
 	delay(10);
-digitalWrite(PIN_LED, LOW);
+	digitalWrite(PIN_LED, LOW);
+}
+
+void receiveFromActionModule(){
+	// TODO : receive message from actionodule
+	// waterTemp, noodleTemp, pps update signal
 }
 
 void sendToP5(){
 	// TODO : send to Processing
 	// start?
+	// waterTemp, noodleTemp
+	// pps update message
 	if(digitalRead(PIN_START_BTN)){
 		Serial.println("S");
 	}
