@@ -24,15 +24,32 @@
  */
 
 // define pintouts
-#define PIN_GPS_PPS         0       // gps pps pulse read (interrupt)
-#define PIN_BLOWER_1        A2      // air blower #1
-#define PIN_BLOWER_2        A3      // air blower #2
-#define PIN_BLOWER_3        A4      // air blower #3
-#define PIN_THERMAL_READ    A5      // thermal read
-#define PIN_SERVO			5		// analogWrite 
-#define PIN_BALL_HEATING    9       // metal ball heating
-#define PIN_BALL_RELEASE    10      // metal ball release
-#define PIN_EGG_BREAKER     11      // egg breaker
+#define PIN_SOLENOID_1		A0
+#define PIN_SOLENOID_2		A1 
+#define PIN_SOLENIOD_3 		A2
+#define PIN_EGG_BREAKER 	A3 
+#define PIN_SIREN_1			A4
+#define PIN_SIREN_2			A5
+
+// thremal SPI pin
+#define PIN_THERMAL_SCK		SCK
+#define PIN_THERMAL_MOSI 	MOSI
+#define PIN_THERMAL_MISO	MISO 
+
+#define PIN_GPS_RX			0
+#define PIN_GPS_TX			1
+
+#define PIN_GPS_PPS			2	// as interrupt pin #2
+#define PIN_HOT_WATER		3
+
+#define PIN_DROP_MBALL		5
+#define PIN_HOT_MBALL		6
+#define PIN_SERVO_PWM_1		9
+#define PIN_SERVO_PWM_2		10
+#define PIN_SIREN_PWM		11
+#define PIN_SERVO_PWM_3		12
+#define PIN_LED 			13
+
 
 #include <Adafruit_MAX31856.h>     // thermal module
 
