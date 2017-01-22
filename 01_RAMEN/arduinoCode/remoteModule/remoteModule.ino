@@ -23,79 +23,103 @@
  *  
  */
 
+#include <SPI.h>
+#include <RH_RF95.h>
+#include <Adafruit_MAX31856.h>     // thermal module
+#include <Servo.h>
+
 // define pintouts
 #define PIN_SOLENOID_1		A0
 #define PIN_SOLENOID_2		A1 
 #define PIN_SOLENIOD_3 		A2
 #define PIN_EGG_BREAKER 	A3 
 #define PIN_SIREN_1			A4
-#define PIN_SIREN_2			A5
 
 // thremal SPI pin
-#define PIN_THERMAL_SCK		SCK
-#define PIN_THERMAL_MOSI 	MOSI
-#define PIN_THERMAL_MISO	MISO 
-
-#define PIN_GPS_RX			0
-#define PIN_GPS_TX			1
-
 #define PIN_GPS_PPS			2	// as interrupt pin #2
-#define PIN_HOT_WATER		3
+#define PIN_HOT_WATER		3	// SCL
 
 #define PIN_DROP_MBALL		5
-#define PIN_HOT_MBALL		6
+#define PIN_HEATING_MBALL	6
 #define PIN_SERVO_PWM_1		9
-#define PIN_SERVO_PWM_2		10
-#define PIN_SIREN_PWM		11
-#define PIN_SERVO_PWM_3		12
+#define PIN_THERMAL_1_CS	10
+#define PIN_BUZZER_PWM		11
+#define PIN_THERMAL_2_CS	12
 #define PIN_LED 			13
 
+#define NUM_OF_IN_MESSAGE	8
+#define NUM_OF_BYPASSOUT	7 	
 
-#include <Adafruit_MAX31856.h>     // thermal module
+// LoRa SETTING
+// LoRa SETTING
+#define RFM95_CS			8
+#define RFM95_RST			4
+#define RFM95_INT			7
 
-bool blower1ON = false;
-bool blower2ON = false;
-bool blower3ON = false;
-bool ballHeating = false;
-bool ballRelease = false;
-bool eggBreak = false;
+// LoRa FREQ 
+#define RF95_FREQ			433.0	
 
-int messageFromP5[7];
-// use hardware SPI pin
-Adafruit_MAX31856 thermal = Adafruit_MAX31856(THERMAL_READ);
+#define SEND_BUFFER_SIZE	51
+
+Adafruit_MAX31856 waterThermal = Adafruit_MAX31856(PIN_THERMAL_1_CS);
+Adafruit_MAX31856 noodleThermal = Adafruit_MAX31856(PIN_THERMAL_2_CS);
+RH_RF95 rf95(RFM95CS, RFM95_INT);
+Servo servo;
+
+int outputByPassPinList[NUM_OF_BYPASSOUT];
+int incommingMessage[NUM_OF_IN_MESSAGE];
+float waterTemp, noodleTemp;
+
 
 void setup() {
-	// put your setup code here, to run once:
 	Serial.begin(115200);
 
+	// init MAX31856 
 	thermal.begin();
-	thermal.setThermocoupleType(MAX31856_TCTYPE_K);
+	waterThermal.setThermocoupleType(MAX31856_TCTYPE_K);
+	noodleThermal.setThermocoupleType(MAX31956_TCTYPE_K);
 
-	// attachInterrupt
+	servo.sttach(PIN_SERVO_PWM_1);
+
+	initLoRa();
+
+	// attachInterrupt : GPS_PPS 
 	attachInterrupt(GPS_PPS, pps_interrupt, RISING);
 
+	outputBypassPinList[0] = PIN_SOLENOID_1;
+	outputBypassPinList[1] = PIN_SOLENOID_2;
+	outputBypassPinList[2] = PIN_SOLENOID_3;
+	outputBypassPinList[3] = PIN_EGG_BREAKER;
+	outputBypassPinList[4] = PIN_HOT_WATER;
+	outputBypassPinList[5] = PIN_DROP_MBALL;
+	outputBypassPinList[6] = PIN_HEATING_MBALL;
 
-	// we have 6 controlPin.
-	pinMode(PIN_BLOWER_1, OUTPUT);
-	pinMode(PIN_BLOWER_2, OUTPUT);
-	pinMode(PIN_BLOWER_3, OUTPUT);
-	pinMode(PIN_BALL_HEATING, OUTPUT);
-	pinMode(PIN_BALL_RELEASE, OUTPUT);
-	pinMode(PIN_EGG_BREAKER, OUTPUT);
-	pinMode(PIN_SERVO, OUTPUT);
 
+	// bypass Pinout set
+	for(int i=0; i<NUM_OF_BYPASSOUT; i++){
+		pinMode(outputByPassPinList[i], OUTPUT);
+	}
+
+	// PIN I/O setting
+	pinMode(PIN_SIREN_1, OUTPUT);
+	pinMode(PIN_SERVO_PWM_1, OUTPUT);		// PWM : noodle UP/DOWN
+	pinMode(PIN_BUZZER_PWM, OUTPUT);		// PWM : BUZZER
+	pinMode(PIN_LED, OUTPUT);
+	
 
 	// init messageFromP5 Buffer
-	for(int i=0; i<sizeof(messageFromP5)/sizeof(messageFromP5[0]); i++){
-		messageFromP5[i] = 0;
+	for(int i=0; i<NUM_OF_IN_MESSAGE; i++){
+		incommingMessage[i] = 0;
 	}
+
+	thermalTemp = 0.f;
 }
 
 void loop() {
 	// put your main code here, to run repeatedly:
 
 	// print thermal temp
-	Serial.print(thermal.readThermocoupleTemperature());
+	// Serial.print(thermal.readThermocoupleTemperature());
 
 	// thermal ERROR HANDLING -> redefinition TODO
 	uint8_t fault = thermal.readFault();
@@ -109,24 +133,37 @@ void loop() {
 		if (fault & MAX31856_FAULT_OVUV)    Serial.println("Over/Under Voltage Fault");
 		if (fault & MAX31856_FAULT_OPEN)    Serial.println("Thermocouple Open Fault");
 	}
+	// get temp 
+	waterTemp = waterThermal.readThermocoupleTemperature();
+	noodleTemp = noodleThermal.readThermocoupleTemperature();
+	getMessage();
+	action();
+}
 
-	if(messageFromP5[0])	digitalWrite(PIN_BLOWER_1, HIGH);
-	else					digitalWrite(PIN_BLOWER_1, LOW);
+void initLoRa(){
+	Serial.println("Feather LoRa RX Test!");
 
-	if(messageFromP5[1])	digitalWrite(PIN_BLOWER_2, HIGH);
-	else					digitalWrite(PIN_BLOWER_2, LOW);
+	manualLoRaReset();
 
-	if(messageFromP5[2])	digitalWrite(PIN_BLOWER_3, HIGH);
-	else					digitalWrite(PIN_BLOWER_3, LOW);
+	while(!rf95.init()){
+		Serial.println("LoRa radio init faild");
+		while(1);
+	}
 
-	if(messageFromP5[4])	digitalWrite(PIN_BALL_HEATING, HIGH);
-	else					digitalWrite(PIN_BALL_HEATING, LOW);
+	Serial.println("LoRa radio init OK!");
 
-	if(messageFromP5[5])	digitalWrite(PIN_BALL_RELEASE, HIGH);
-	else					digitalWrite(PIN_BALL_RELEASE, LOW);
+	// defauls after init are 434.0MHz. 
+	if(!rf95.setFrequency(RF95_FREQ)){
+		Serial.println("setFrequency failed.");
+		while(1);
+	}
 
-	noodleUpDown(messageFromP5[6]);
+	Serial.print("Set Freq to: "); Serial.println(RF95_FREQ);
 
+	// The default transmitter power is 13dBm, using PA_BOOST.
+	// If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then 
+	// you can set transmitter powers from 5 to 23 dBm:
+	rf95.setTxPower(23, false);
 }
 
 void pps_interrupt(){
@@ -136,31 +173,58 @@ void pps_interrupt(){
 // -1, 0, 1
 // direct Servo control with PWM pin
 void noodleUpDown(int _rotateCtrl){
-	if(_rotateCtrl < 0)			analogWrite(PIN_SERVO, 0);		// left
-	else if(_rotateCtrl > 0)	analogWrite(PIN_SERVO, 100);	// right 
-	else						analogWrite(PIN_SERVO, 90);		// stop
+	if(_rotateCtrl < 2)			servo.writeMicroseconds(2000);	// 1 : right 
+	else if(_rotateCtrl > 2)	servo.writeMicroseconds(1000);	// 3 : left
+	else						servo.writeMicroseconds(1500);	// 2 : stop
+}
+
+void action(){
+	for(int i=0; i<NUM_OF_IN_MESSAGE-1; i++){
+		if(incommingMessage[i] == 1)	digitalWrite(outputBypassPinList[i], HIGH);
+		else 							digitalWRite(outputBypassPinList[i], LOW);
+	}
+
+	noodleUpDown(incommingMessage[NUM_OF_IN_MESSAGE-1]);
 }
 
 
-// sudo function definition
-bool GFEDigitalRead(int _pin){ 
-	return digitalRead(_pin);	
+void siren(){
+	// TODO :
+	// trigger?
 }
 
-int  GFEAnalogRead(int _pin){ 
-	return analogRead(_pin);	
+void buzzer(){
+	// trigger ?
+	// how ?
 }
 
-void GFEDigitalWrite(int _pin, bool _out) { 
-	digitalWrite(_pin, _out); 
-}
-
-void GFEAnalogWrite(int _pin, int _out)	{ 
-	analogWrite(_pin, _out);	
-}
-
-
-void serialEvent(){
-	// TODO : send thermal degree to processing
+void receiveFromControlModule(){
+	// TODO :
+	// get message from controlModule RF95/
+	// parsing to incommingMessage array
 	
+	// for(int i=0; i<NUM_OF_IN_MESSAGE; i++){
+		// incommingMessage[i] = ;
+	// }
+	if(rf95.available()){
+		uint8_t buf[16];
+		uint8_t len=sizeof(buf);
+
+		// PARSER 
+		if(rf95.recv(buf, &len)){
+			digitalWrite(LED, HIGH);
+			if((char)buf[0] == '/' )	{
+				for(int i = 0;  i<NUM_OF_IN_MESSAGE; i++){			
+					incommingMessage[i] = buf[i*2+1];			// <--- MUST CHECK AND DEBUG!!!
+				}
+			}
+			digitalWrite(LED, LOW);
+		}
+	}
+
+}
+
+void sendToControlModule(){
+	// TODO : send message to controlModule
+	// waterTemp, noodleTemp, pps update signal
 }
