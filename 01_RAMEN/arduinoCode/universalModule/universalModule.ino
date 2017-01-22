@@ -1,8 +1,3 @@
-
-
-// define interrupt pin
-
-
 // define pinouts
 // PAIR READ =====================
 #define PIN_BLOWER_1_BTN		1      // air blower #1
@@ -23,10 +18,14 @@
 #define PIN_THERMAL_READ		12      // thermal analog read
 #define PIN_NOODLE_UP			13
 #define PIN_NOODLE_DOWN			14
-// PAIR OUT  - - - - - - - - - - -
-#define PIN_SERVO_DIR_OUT		15		// PWM
 #define PIN_START_BUTTON 		16	
+// NON PAIR OUT  - - - - - - - - -
+#define PIN_SERVO_DIR_OUT		15		// PWM
+
+// INTERRUPT PIN READ
 #define PIN_GPS_PPS         	0       // interrupt (NOT USED MAYBE)
+//==================================
+
 
 #define NUM_OF_INPUTS  			9
 
@@ -40,13 +39,15 @@
 // use hardware SPI pin
 Adafruit_MAX31856 thermal = Adafruit_MAX31856(PIN_THERMAL_READ);
 
-enum actionState{ sNone, sP1, sBlower2, sBlower3, sHeatingBall, sReleaseBall, sEggBreak };
+enum actionState{ sNone, sP1, sBlower2, sBlower3, sHeatingBall, sReleaseBall, sEggBreak, sStart };
 actionState action;
 
 // state buffer
 int 	readValue[16];
 int 	lastReadValue[16];
 bool	bReadUpdated[16];
+
+bool bStarted;
 
 // input pins
 int inputPinGroup[NUM_OF_INPUTS]; 
@@ -59,6 +60,7 @@ void setup() {
 	thermal.setThermocoupleType(MAX31856_TCTYPE_K);
 
 	initSys();
+	bStarted = false;
 }
 
 	void initSys(){
@@ -143,43 +145,68 @@ void action(actionState _state){
 	switch(_state){
 		case sBlower1 :
 			// blower 1
+			if(readValue[PIN_BLOWER_1_BTN])	 gfeDigitalWrite(PIN_BLOWER_1_OUT, true);
+			else							 gfeDigitalWrite(PIN_BLOWER_1_OUT, false);
 			break;
 		case sBlower2 :
-			// blower 2 
+			// blower 2
+			if(readValue[PIN_BLOWER_2_BTN])	 gfeDigitalWrite(PIN_BLOWER_2_OUT, true);
+			else							 gfeDigitalWrite(PIN_BLOWER_2_OUT, false);
 			break;
 		case sBlower3 :
 			// blower 3
+			if(readValue[PIN_BLOWER_3_BTN])	 gfeDigitalWrite(PIN_BLOWER_3_OUT, true);
+			else							 gfeDigitalWrite(PIN_BLOWER_3_OUT, false);
 			break;
 		case sHeatingBall:
 			// heating ball
+			if(readValue[PIN_HEATING_MBALL_BTN])	gfeDigitalWrite(PIN_HEATING_MBALL_OUT, true);
+			else 									gfeDigitalWrite(PIN_HEATING_MBALL_OUT, false);
 			break;
 		case sReleaseBall:
 			// release ball
+			if(readValue[PIN_RELEASE_MBALL_BTN])	gfeDigitalWrite(PIN_RELEASE_MBALL_OUT, true);
+			else 									gfeDigitalWrite(PIN_RELEASE_MBALL_OUT, false);
 			break;
 		case sEggBeak:
 			// break egg
+			if(readValue[PIN_EGG_BREAKER_BTN])		gfeDigitalWrite(PIN_EGG_BREAKER_OUT, true);
+			else									gfeDigitalWrite(PIN_EGG_BREAKER_OUT, false);
 			break;
 		case sNoodleUpDown:
+			if((!readValue[PIN_NOODLE_DOWN] && !readValue[PIN_NOODLE_UP]) || (readValue[PIN_NOODLE_UP] && readBalue[PIN_NOODLE_DOWN])){
+				gfeDigitalWrite(PIN_SERVO_DIR_OUT, 90);		// stop
+			} else if(readVAlue[PIN+NOODLE_UP]){
+				gfeDigitalWrite(PIN_SERVO_DIR_OUT, 100);	// right
+			} else {
+				gfeDigitalWrite(PIN_SERVO_DIR_OUT, 0);		// left
+			}
 			// servo Control
+			break;
+		case sStart:
+			if(!bStarted)	bStarted = true;
+			Serial.println('S');			// send to P5 start signal
 			break;
 		default:
 			// read thermal degree
-			// 
+			
 			break;
 	}
 }
 
 // Pseudo function
 bool gfeDigitalRead(int _pin){ 
-	return digitalRead(_pin);	
+	if(digitalRead(_pin) == 1024)	return true;	
+	else							return false;
 }
 
 int  gfeAnalogRead(int _pin){ 
 	return analogRead(_pin);	
 }
 
-void gfeWrite(int _pin, bool _out) { 
-	digitalWrite(_pin, _out); 
+void gfeDigitalWrite(int _pin, bool _out) { 
+	if(_out)	digitalWrite(_pin, true); 
+	else		digitalWrite(_pin, false); 
 }
 
 void gfeAnalogWrite(int _pin, int _out)	{ 
