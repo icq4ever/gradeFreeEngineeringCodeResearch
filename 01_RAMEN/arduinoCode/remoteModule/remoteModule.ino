@@ -47,7 +47,7 @@
 #define PIN_THERMAL_2_CS	12
 #define PIN_LED 			13
 
-#define NUM_OF_IN_MESSAGE	8
+#define NUM_OF_IN_MESSAGE	9
 #define NUM_OF_BYPASSOUT	7 	
 
 // LoRa SETTING
@@ -107,12 +107,13 @@ void setup() {
 	pinMode(PIN_LED, OUTPUT);
 	
 
-	// init messageFromP5 Buffer
+	// init messageFromActionMOdule
 	for(int i=0; i<NUM_OF_IN_MESSAGE; i++){
 		incommingMessage[i] = 0;
 	}
 
-	thermalTemp = 0.f;
+	waterTemp = 0.f;
+	noodleTemp = 0.f;
 }
 
 void loop() {
@@ -187,6 +188,15 @@ void action(){
 	noodleUpDown(incommingMessage[NUM_OF_IN_MESSAGE-1]);
 }
 
+int generateServoDirectionFlag(){
+	// UP/DOWN all pressed or nothing pressed
+	if(inputBtnStatus[inputPinList[8]] && inputBtnStatus[inputList[9]] || !inputBtnStatus[inputPinList[8]] && !inputBtnStatus[inputList[9]]){
+		return 2;	// STOP
+	} else {
+		if(inputBtnStatus[inputPinList[8]])		return 1;	// up pressed : RIGHT
+		else 									return 3;	// down pressed : LEFT
+	}
+}
 
 void siren(){
 	// TODO :

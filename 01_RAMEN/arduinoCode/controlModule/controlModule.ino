@@ -45,7 +45,7 @@
 
 // number of button message bit
 #define NUM_OF_INPUT		10
-#define NUM_OF_MESSAGE		8
+#define NUM_OF_MESSAGE		9
 
 // ==============================================================
 // LoRa SETTING
@@ -78,10 +78,10 @@ void setup() {
 	inputPinList[4] = PIN_HOT_WATER;
 	inputPinList[5] = PIN_DROP_MBALL;
 	inputPinList[6] = PIN_HEATING_MBALL;
-
-	inputPinList[7] = PIN_START_BTN;
-	inputPinList[8] = PIN_SERVO_UP;
-	inputPinList[9] = PIN_SERVO_DOWN;
+	inputPinList[7] = PIN_SERVO_UP;
+	inputPinList[8] = PIN_SERVO_DOWN;
+	inputPinList[9] = PIN_START_BTN;
+	
 
 	// input Pin setup
 	for(int i=0; i<NUM_OF_INPUT; i++){
@@ -112,7 +112,11 @@ void loop() {
 void initLoRa(){
 	Serial.println("Feather LoRa TX Test!");
 
-	manualLoRaReset();
+	// manual LoRa reset
+	digitalWrite(RFM95_RST, LOW);
+	delay(10);
+	digitalWrite(RFM95_RST, HIGH);
+	delay(10);
 
 	while(!rf95.init()){
 		Serial.println("LoRa radio init faild");
@@ -135,45 +139,28 @@ void initLoRa(){
 	rf95.setTxPower(23, false);
 }
 
-int generateServoDirectionFlag(){
-	// UP/DOWN all pressed or nothing pressed
-	if(inputBtnStatus[inputPinList[8]] && inputBtnStatus[inputList[9]] || !inputBtnStatus[inputPinList[8]] && !inputBtnStatus[inputList[9]]){
-		return 2;	// STOP
-	} else {
-		if(inputBtnStatus[inputPinList[8]])		return 1;	// up pressed : RIGHT
-		else 									return 3;	// down pressed : LEFT
-	}
-}
-
-
-void manualLoRaReset(){
-	digitalWrite(RFM95_RST, LOW);
-	delay(10);
-	digitalWrite(RFM95_RST, HIGH);
-	delay(10);
-}
-
 void updateBtnStatus(){
-for(int i=0; i<NUM_OF_INPUT; i++){
+	for(int i=0; i<NUM_OF_INPUT; i++){
 		if(digitalRead(inputPinList[i]) !=0)	inputBtnStatus[i] = true;
 		else									inputBtnStatus[i] = false;
 	}
 }
 
 void updateActionMessage(){
-	for(int i=0; i<NUM_OF_MESSAGE-1; i++){
+	for(int i=0; i<NUM_OF_MESSAGE; i++){
 		if(inputBtnStatus[i])	actionMessage[i] = 1;
 		else					actionMessage[i] = 0;
 	}
 
-	actionMessage[NUM_OF_MESSAGES-1] = generateServoDirectionFlag();
+	// actionMessage[NUM_OF_MESSAGES-1] = generateServoDirectionFlag();
 }
 
 void sendToActionBoard(){
-	digitalWrite(PIN_LED, HIGH);
+digitalWrite(PIN_LED, HIGH);
 	String tempStr = String("");
 	// tempStr+="M: ";
 	tempStr+="/";
+
 	for(int i=0; i<[NUM_OF_MESSAGE]; i++){
 		tempStr+=actionMessage[i];
 		tempStr+=", "; 
