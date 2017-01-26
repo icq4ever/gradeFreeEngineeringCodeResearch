@@ -33,7 +33,7 @@
 #define PIN_SOLENOID_2		A1 
 #define PIN_SOLENIOD_3 		A2
 #define PIN_EGG_BREAKER 	A3 
-#define PIN_SIREN_1			A4
+#define PIN_SIREN			A4
 
 // thremal SPI pin
 #define PIN_GPS_PPS			2	// as interrupt pin #2
@@ -41,14 +41,14 @@
 
 #define PIN_DROP_MBALL		5
 #define PIN_HEATING_MBALL	6
-#define PIN_SERVO_PWM_1		9
-#define PIN_THERMAL_1_CS	10
+#define PIN_SERVO_PWM		9
+#define PIN_WATER_TEMP_CS	10
 #define PIN_BUZZER_PWM		11
-#define PIN_THERMAL_2_CS	12
+#define PIN_NOODLE_TEMP_CS	12
 #define PIN_LED 			13
 
-#define NUM_OF_IN_MESSAGE	9
-#define NUM_OF_BYPASSOUT	7 	
+#define RECV_BUFFER_SIZE	9
+#define IN_MESSAGE_SIZE		RECV_BUFFER_SIZE - 2
 
 // LoRa SETTING
 // LoRa SETTING
@@ -66,8 +66,11 @@ Adafruit_MAX31856 noodleThermal = Adafruit_MAX31856(PIN_THERMAL_2_CS);
 RH_RF95 rf95(RFM95CS, RFM95_INT);
 Servo servo;
 
+uint8_t getBuffer[RECV_BUFFER_SIZE];
+bool controlBtnStatus[IN_MESSAGE_SIZE];
 int outputByPassPinList[NUM_OF_BYPASSOUT];
-int incommingMessage[NUM_OF_IN_MESSAGE];
+
+
 float waterTemp, noodleTemp;
 
 
@@ -75,7 +78,8 @@ void setup() {
 	Serial.begin(115200);
 
 	// init MAX31856 
-	thermal.begin();
+	waterThermal.begin();
+	noodleThermal.begin();
 	waterThermal.setThermocoupleType(MAX31856_TCTYPE_K);
 	noodleThermal.setThermocoupleType(MAX31956_TCTYPE_K);
 
@@ -91,10 +95,9 @@ void setup() {
 	outputBypassPinList[2] = PIN_SOLENOID_3;
 	outputBypassPinList[3] = PIN_EGG_BREAKER;
 	outputBypassPinList[4] = PIN_HOT_WATER;
-	outputBypassPinList[5] = PIN_DROP_MBALL;
-	outputBypassPinList[6] = PIN_HEATING_MBALL;
-
-
+	outputBypassPinList[5] = PIN_HEATING_MBALL;
+	outputBypassPinList[6] = PIN_DROP_MBALL;
+	
 	// bypass Pinout set
 	for(int i=0; i<NUM_OF_BYPASSOUT; i++){
 		pinMode(outputByPassPinList[i], OUTPUT);
@@ -121,22 +124,7 @@ void loop() {
 
 	// print thermal temp
 	// Serial.print(thermal.readThermocoupleTemperature());
-
-	// thermal ERROR HANDLING -> redefinition TODO
-	uint8_t fault = thermal.readFault();
-	if (fault) {
-		if (fault & MAX31856_FAULT_CJRANGE) Serial.println("Cold Junction Range Fault");
-		if (fault & MAX31856_FAULT_TCRANGE) Serial.println("Thermocouple Range Fault");
-		if (fault & MAX31856_FAULT_CJHIGH)  Serial.println("Cold Junction High Fault");
-		if (fault & MAX31856_FAULT_CJLOW)   Serial.println("Cold Junction Low Fault");
-		if (fault & MAX31856_FAULT_TCHIGH)  Serial.println("Thermocouple High Fault");
-		if (fault & MAX31856_FAULT_TCLOW)   Serial.println("Thermocouple Low Fault");
-		if (fault & MAX31856_FAULT_OVUV)    Serial.println("Over/Under Voltage Fault");
-		if (fault & MAX31856_FAULT_OPEN)    Serial.println("Thermocouple Open Fault");
-	}
-	// get temp 
-	waterTemp = waterThermal.readThermocoupleTemperature();
-	noodleTemp = noodleThermal.readThermocoupleTemperature();
+	getTempData();	
 	getMessage();
 	action();
 }
@@ -171,6 +159,35 @@ void pps_interrupt(){
 	// TODO : synchronize with PPS from GPS breakout board
 }
 
+void siren(){
+	// TODO :
+	// trigger?
+}
+
+void buzzer(){
+	// trigger ?
+	// how ?
+}
+
+void getTempData(){
+	// thermal ERROR HANDLING -> redefinition TODO
+	uint8_t faultCheck_Water = waterThermal.readFault();
+	uint8_t faultCheck_Noodle = noodleThermal.readFault();
+
+	if (!faultCheck_Water) 		waterTemp = waterThermal.readThermocoupleTemperature();
+	if (!faultCheck_Noodle)		noodleTemp = noodleThermal.readThermocoupleTemperature();
+}
+
+int generateServoDirectionFlag(){
+	// UP/DOWN all pressed or nothing pressed
+	if(inputBtnStatus[inputPinList[8]] && inputBtnStatus[inputList[9]] || !inputBtnStatus[inputPinList[8]] && !inputBtnStatus[inputList[9]]){
+		return 2;	// STOP
+	} else {
+		if(inputBtnStatus[inputPinList[8]])		return 1;	// up pressed : RIGHT
+		else 									return 3;	// down pressed : LEFT
+	}
+}
+
 // -1, 0, 1
 // direct Servo control with PWM pin
 void noodleUpDown(int _rotateCtrl){
@@ -188,50 +205,29 @@ void action(){
 	noodleUpDown(incommingMessage[NUM_OF_IN_MESSAGE-1]);
 }
 
-int generateServoDirectionFlag(){
-	// UP/DOWN all pressed or nothing pressed
-	if(inputBtnStatus[inputPinList[8]] && inputBtnStatus[inputList[9]] || !inputBtnStatus[inputPinList[8]] && !inputBtnStatus[inputList[9]]){
-		return 2;	// STOP
-	} else {
-		if(inputBtnStatus[inputPinList[8]])		return 1;	// up pressed : RIGHT
-		else 									return 3;	// down pressed : LEFT
-	}
-}
-
-void siren(){
-	// TODO :
-	// trigger?
-}
-
-void buzzer(){
-	// trigger ?
-	// how ?
-}
 
 void receiveFromControlModule(){
-	// TODO :
-	// get message from controlModule RF95/
-	// parsing to incommingMessage array
-	
-	// for(int i=0; i<NUM_OF_IN_MESSAGE; i++){
-		// incommingMessage[i] = ;
-	// }
 	if(rf95.available()){
-		uint8_t buf[16];
-		uint8_t len=sizeof(buf);
+		uint8_t getBufferLen = sizeof(getBuffer);
 
 		// PARSER 
-		if(rf95.recv(buf, &len)){
+		if(rf95.recv((char *)getBuffer, &getBufferLen)){
 			digitalWrite(LED, HIGH);
-			if((char)buf[0] == '/' )	{
-				for(int i = 0;  i<NUM_OF_IN_MESSAGE; i++){			
-					incommingMessage[i] = buf[i*2+1];			// <--- MUST CHECK AND DEBUG!!!
-				}
-			}
+			rf95.waitPacketSent();
 			digitalWrite(LED, LOW);
 		}
 	}
+}
 
+void getControlBtnStatus(){
+	if(getBuffer[0] == '/'){
+		digitalWrite(PIN_LED, HIGH);
+		for(int i=1; i<IN_MESSAGE_SIZE-1; i++){
+			if((char)getBuffer[i] == '1')		controlBtnStatus[i-1] = true;
+			else								controlBtnStatus[i-1] = false;
+		}
+		digitalWrite(PIN_LED, LOW);
+	}
 }
 
 void sendToControlModule(){

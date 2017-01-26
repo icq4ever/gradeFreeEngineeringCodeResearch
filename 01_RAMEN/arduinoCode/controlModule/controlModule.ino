@@ -18,34 +18,28 @@
 
 // ==============================================================
 // GFE STANDARD CONTROL PIN LIST
-#define PIN_SOLENOID_1		A0		// 1, MSG
-#define PIN_SOLENOID_2		A1		// 2, MSG
-#define PIN_SOLENOID_3		A2		// 3, MSG
-#define PIN_EGG_BREAKER		A3		// 4, MSG	
-#define PIN_START_BTN		A4		// 5, P5	
-#define PIN_HOT_WATER		A5		// 6, MSG	
-#define PIN_DROP_MBALL		5		// 7, MSG	
-#define PIN_HEATING_MBALL	6		// 8, MSG	
-#define PIN_SERVO_UP		9		// 9
-#define PIN_SERVO_DOWN		10		// 10
+#define PIN_SOLENOID_1_BTN		A2		// 1, MSG
+#define PIN_SOLENOID_2_BTN		A3		// 2, MSG
+#define PIN_SOLENOID_3_BTN		A4		// 3, MSG
+#define PIN_EGG_BREAKER_BTN		A5		// 4, MSG	
+#define PIN_START_BTN			SCK		// 5, P5	
+#define PIN_HOT_WATER_BTN		MOSI	// 6, MSG	
+#define PIN_DROP_MBALL_BTN		MISO	// 7, MSG	
+#define PIN_HEATING_MBALL_BTN	4		// 8, MSG	
+#define PIN_SERVO_UP_BTN		5		// 9
+#define PIN_SERVO_DOWN_BTN		9		// 10
 
-									//	  MSG : SERVO CTRL
+#define PIN_LED 				13		// PIN_LED 	
 
-#define PIN_LED 			13		// PIN_LED 	
-
-#define PIN_SPI_SCK	 		SCK		//PIN_SPI_SCK	
-#define PIN_SPI_MOSI 		MOSI	//PIN_SPI_MOSI
-#define PIN_SPI_MISO		MISO	//PIN_SPI_MISO
-
-#define PIN_RX				0		//PIN_RX		
-#define PIN_TX				1		//PIN_TX		
-#define PIN_SDA				2		//PIN_SDA		
-#define PIN_SCL				3		//PIN_SCL		
 // ==============================================================
 
 // number of button message bit
 #define NUM_OF_INPUT		10
-#define NUM_OF_MESSAGE		9
+
+#define OUT_MESSAGE_SIZE	9
+#define SEND_BUFFER_SIZE	OUT_MESSAGE_SIZE+2
+
+// IN_MESSAGE_SIZE / RECV_BUFFER_SIZE
 
 // ==============================================================
 // LoRa SETTING
@@ -63,37 +57,36 @@
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
 int 	inputPinList[NUM_OF_INPUT];
-int 	inputBtnStatus[NUM_OF_INPUT];
-int 	actionMessage[NUM_OF_MESSAGE];
+int 	inputBtnStatus[OUT_MESSAGE_SIZE];
 char	sendBuffer[SEND_BUFFER_SIZE];
 
 void setup() {
 	// start Serial vis USB
 	Serial.begin(115200);
 
-	inputPinList[0] = PIN_SOLENOID_1;
-	inputPinList[1] = PIN_SOLENOID_2;
-	inputPinList[2] = PIN_SOLENOID_3;
-	inputPinList[3] = PIN_EGG_BREAKER;
-	inputPinList[4] = PIN_HOT_WATER;
-	inputPinList[5] = PIN_DROP_MBALL;
-	inputPinList[6] = PIN_HEATING_MBALL;
-	inputPinList[7] = PIN_SERVO_UP;
-	inputPinList[8] = PIN_SERVO_DOWN;
-	inputPinList[9] = PIN_START_BTN;
+	inputPinList[0] = PIN_SOLENOID_1_BTN;
+	inputPinList[1] = PIN_SOLENOID_2_BTN;
+	inputPinList[2] = PIN_SOLENOID_3_BTN;
+	inputPinList[3] = PIN_EGG_BREAKER_BTN;
+	inputPinList[4] = PIN_HOT_WATER_BTN;
+	inputPinList[5] = PIN_HEATING_MBALL_BTN;
+	inputPinList[6] = PIN_DROP_MBALL_BTN;
+	inputPinList[7] = PIN_SERVO_UP_BTN;
+	inputPinList[8] = PIN_SERVO_DOWN_BTN;
 	
+	inputPinList[9] = PIN_START_BTN;
 
 	// input Pin setup
 	for(int i=0; i<NUM_OF_INPUT; i++){
 		pinMode(inputPinList[i], INPUT);	
-		inputBtnStatus[i] = 0;
+		if(i != NUM_OF_INPUT-1)		inputBtnStatus[i] = 0;
 	}
 
 	// output pin setup
 	pinMode(PIN_LED, OUTPUT);
 
-	for(int i=0; i<NUM_OF_MESSAGE; i++){
-		actionMessage[i] = 0;
+	for(int i=0; i<OUT_MESSAGE_SIZE; i++){
+		sendBuffer[i] = 'N';
 	}
 
 	while (!Serial);
@@ -105,8 +98,8 @@ void setup() {
 
 void loop() {
 	updateBtnStatus();
-	updateActionMessage();
-	sendToActionBoard();
+	updateSendBuffer();
+	sendToActionModule();
 }
 
 void initLoRa(){
@@ -140,36 +133,29 @@ void initLoRa(){
 }
 
 void updateBtnStatus(){
-	for(int i=0; i<NUM_OF_INPUT; i++){
+	for(int i=0; i<OUT_MESSAGE_SIZE; i++){
 		if(digitalRead(inputPinList[i]) !=0)	inputBtnStatus[i] = true;
 		else									inputBtnStatus[i] = false;
 	}
 }
 
-void updateActionMessage(){
-	for(int i=0; i<NUM_OF_MESSAGE; i++){
-		if(inputBtnStatus[i])	actionMessage[i] = 1;
-		else					actionMessage[i] = 0;
+void updateSendBuffer(){
+	/*
+		sendBuffer[] = { /, 1, 0, 1, 0, 1, 1, 1, 1...} 
+	*/
+	sendBuffer[0] = '/';
+	for(int i=0; i<OUT_MESSAGE_SIZE; i++){
+		if(inputBtnStatus[i])	sendBuffer[i+1] = '1';
+		else					sendBuffer[i+1] = '0';
 	}
-
-	// actionMessage[NUM_OF_MESSAGES-1] = generateServoDirectionFlag();
+	sendBuffer[SEND_BUFFER_SIZE-1] = 0;
 }
 
-void sendToActionBoard(){
-digitalWrite(PIN_LED, HIGH);
-	String tempStr = String("");
-	// tempStr+="M: ";
-	tempStr+="/";
-
-	for(int i=0; i<[NUM_OF_MESSAGE]; i++){
-		tempStr+=actionMessage[i];
-		tempStr+=", "; 
-	}
-
-	tempStr.toCharArray(sendBuffer, SEND_BUFFER_SIZE);
-
-	rf95.send((uint8_t *)sendBuffer, tempStr.length());
-	delay(10);
+void sendToActionModule(){
+	digitalWrite(PIN_LED, HIGH);
+	
+	rf95.send((uint8_t *)sendBuffer, OUT_MESSAGE_SIZE);
+	rf95.waitPacketSent();
 	digitalWrite(PIN_LED, LOW);
 }
 
