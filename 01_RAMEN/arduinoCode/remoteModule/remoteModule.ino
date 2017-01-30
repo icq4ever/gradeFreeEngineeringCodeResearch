@@ -112,7 +112,9 @@ void setup() {
 	waterThermal.begin();
 	noodleThermal.begin();
 	waterThermal.setThermocoupleType(MAX31856_TCTYPE_K);
+	waterThermal.gfeSetAutoConvertMode();
 	noodleThermal.setThermocoupleType(MAX31856_TCTYPE_K);
+	noodleThermal.gfeSetAutoConvertMode();
 
 	servo.attach(PIN_SERVO_PWM);
 
@@ -148,28 +150,24 @@ void setup() {
 
 	// init messageFromActionModule
 	for(int i=0; i<RECV_BUFFER_SIZE; i++){
-		recvBuffer[i] = 0;
+		recvBuffer[i] = 'N';
 	}
 }
 
 void loop() {
 	// put your main code here, to run repeatedly:
 
-	// print thermal temp
-	// Serial.print(thermal.readThermocoupleTemperature());
-
-	getTempData();
-	updateSendBuffer();
-	sendToControlModule();
-
-	if(rf95.waitAvailableTimeout(100)){
-		receiveFromControlModule();	
-	} else {
-		Serial.println("No Reply");
-	}
 	
+	// updateSendBuffer();
+	// sendToControlModule();
+
+	receiveFromControlModule();	
 	getControlBtnStatus();
-	delay(100);
+	printButtonStatus();
+	// checkButtonWithBuzzer();
+	// delay(100);
+
+	// b
 }
 	
 
@@ -223,7 +221,7 @@ void buzzer(){
 
 int generateServoDirectionFlag(){
 	// UP/DOWN all pressed or nothing pressed
-	if((controlBtnStatus[outputBypassPinList[8]] && controlBtnStatus[outputBypassPinList[9]]) || (!controlBtnStatus[outputBypassPinList[8]] && !controlBtnStatus[outputBypassPinList[9]])){
+	if((controlBtnStatus[outputBypassPinList[9]] && controlBtnStatus[outputBypassPinList[10]]) || (!controlBtnStatus[outputBypassPinList[9]] && !controlBtnStatus[outputBypassPinList[10]])){
 		return 2;	// STOP
 	} else {
 		if(controlBtnStatus[outputBypassPinList[8]])		return 1;	// up pressed : RIGHT
@@ -240,12 +238,12 @@ void noodleUpDown(int _rotateCtrl){
 }
 
 void action(){
-	for(int i=0; i<RECV_BUFFER_SIZE-1; i++){
-		if(recvBuffer[i] == 1)	digitalWrite(outputBypassPinList[i], HIGH);
-		else 					digitalWrite(outputBypassPinList[i], LOW);
-	}
+	// for(int i=0; i<RECV_BUFFER_SIZE-1; i++){
+	// 	if(recvBuffer[i] == 1)	digitalWrite(outputBypassPinList[i], HIGH);
+	// 	else 					digitalWrite(outputBypassPinList[i], LOW);
+	// }
 
-	noodleUpDown(recvBuffer[RECV_BUFFER_SIZE-1]);
+	// noodleUpDown(recvBuffer[RECV_BUFFER_SIZE-1]);
 }
 
 
@@ -255,29 +253,25 @@ void receiveFromControlModule(){
 
 		// PARSER 
 		if(rf95.recv((char *)recvBuffer, &recvBufferLen)){
-			digitalWrite(PIN_LED, HIGH);
-			rf95.waitPacketSent();
-			digitalWrite(PIN_LED, LOW);
+			// digitalWrite(PIN_LED, HIGH);
+			// rf95.waitPacketSent();
+			// digitalWrite(PIN_LED, LOW);
 		}
 	}
 }
 
 void getControlBtnStatus(){
-	if(recvBuffer[0] == '/'){
-		if(recvBuffer[1] == 'B'){
-			digitalWrite(PIN_LED, HIGH);
-		for(int i=2; i<IN_MESSAGE_SIZE; i++){
-			if((char)recvBuffer[i] == '1')		controlBtnStatus[i-2] = true;
-			else								controlBtnStatus[i-2] = false;
-		}
-		digitalWrite(PIN_LED, LOW);
+	if(recvBuffer[0] == '/' && (char)recvBuffer[1] == 'B'){
+		for(int i=0; i<IN_MESSAGE_SIZE; i++){
+			if(recvBuffer[i+2] == '1')		controlBtnStatus[i] = true;
+			else							controlBtnStatus[i] = false;
 		} 
+	}
 
-		if(recvBuffer[1] == 'T'){
-			updateSendBuffer();
-			sendToControlModule();
-		}
-		
+	if(recvBuffer[0] == '/' && (char)recvBuffer[1] == 'T'){
+		getTempData();
+		updateSendBuffer();
+		sendToControlModule();
 	}
 }
 
@@ -286,8 +280,8 @@ void getTempData(){
 	uint8_t faultCheck_Water = waterThermal.readFault();
 	uint8_t faultCheck_Noodle = noodleThermal.readFault();
 
-	if (!faultCheck_Water) 		waterTemp.floatPoint = waterThermal.readThermocoupleTemperature();
-	if (!faultCheck_Noodle)		noodleTemp.floatPoint = noodleThermal.readThermocoupleTemperature();
+	if (!faultCheck_Water) 		waterTemp.floatPoint = waterThermal.gfeThermocoupleTemperature();
+	if (!faultCheck_Noodle)		noodleTemp.floatPoint = noodleThermal.gfeThermocoupleTemperature();
 }
 
 
@@ -330,6 +324,20 @@ void buzzerON(){
 	analogWrite(A4, bBuzzerHW);
 }
 
-void buzzerOFF(){
-	bBuzzerHW = false;
+void printButtonStatus(){
+	for(int i=0; i<RECV_BUFFER_SIZE; i++){
+		Serial.print((char)recvBuffer[i]);
+		Serial.print(", ");
+	}
+	Serial.println();
+
+	// for(int i=0; i<IN_MESSAGE_SIZE; i++){
+	// 	if(controlBtnStatus[i])	{
+	// 		Serial.print('1');
+	// 	} else {
+	// 		Serial.print('0');
+	// 	}
+	// 	Serial.print(", ");
+	// }
+	// Serial.println();
 }

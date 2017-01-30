@@ -58,7 +58,6 @@ RH_RF95 rf95(RFM95_CS, RFM95_INT);
 // timer flags
 bool    bSendToAction, bRequestToAction, bSendToP5;
 
-
 int     inputPinList[NUM_OF_INPUT];
 int     inputBtnStatus[OUT_MESSAGE_SIZE];
 
@@ -107,7 +106,7 @@ void setup() {
 
     // input Pin setup
     for(int i=0; i<NUM_OF_INPUT; i++){
-        pinMode(inputPinList[i], INPUT);    
+        pinMode(inputPinList[i], INPUT_PULLUP);    
         if(i != NUM_OF_INPUT-1)     inputBtnStatus[i] = 0;
     }
 
@@ -126,7 +125,6 @@ void setup() {
 }
 
 void loop() {
-
     unsigned long tickCountCopy;
 
     noInterrupts();
@@ -135,22 +133,23 @@ void loop() {
 
     if(tickCountCopy%2 == 0) {  // 20ms
         bSendToAction = true;
-        Serial.print("action ");
+        // Serial.print("action ");
     } 
 
     if(tickCountCopy%10 == 0){  // 100ms
         bRequestToAction = true;
-        Serial.print("request ");
+        // Serial.print("request ");
     }
 
     if(tickCountCopy%5 == 0){
         bSendToP5 = true;
-        Serial.print("P5 ");
+        // Serial.print("P5 ");
     }
 
-    Serial.println();
+//    Serial.println();
 
     updateBtnStatus();
+    updateSendBuffer();
     sendToActionModule(bSendToAction);
     requestToActionModule(bRequestToAction);
 
@@ -158,6 +157,7 @@ void loop() {
 
     // delay(100);
     getTempFromActionModule();
+    // printBtnStatus();
 
     printTemp();
 }
@@ -194,14 +194,22 @@ void initLoRa(){
 
 void updateBtnStatus(){
     for(int i=0; i<OUT_MESSAGE_SIZE; i++){
-        if(digitalRead(inputPinList[i]) !=0)    inputBtnStatus[i] = true;
+        if(digitalRead(inputPinList[i]) ==0)    inputBtnStatus[i] = true;   // 
         else                                    inputBtnStatus[i] = false;
     }
 }
 
+void printBtnStatus(){  // message
+    for(int i=0; i<SEND_BUFFER_SIZE; i++){
+        Serial.print((char)sendBuffer[i]);
+        Serial.print(", ");
+    }   
+    Serial.println();
+}
+
 void updateSendBuffer(){
     /*
-        sendBuffer[] = { /, 1, 0, 1, 0, 1, 1, 1, 1...} 
+        sendBuffer[] = { /, B, 1, 0, 1, 0, 1, 1, 1, 1...} 
     */
     
     sendBuffer[0] = '/';
@@ -213,12 +221,14 @@ void updateSendBuffer(){
     sendBuffer[SEND_BUFFER_SIZE-1] = 0;
 }
 
+
+
 void sendToActionModule(bool _bSendToAction){
     if(_bSendToAction){
-        updateSendBuffer();
+        // updateSendBuffer();
         digitalWrite(PIN_LED, HIGH);
         
-        rf95.send((uint8_t *)sendBuffer, OUT_MESSAGE_SIZE);
+        rf95.send((uint8_t *)sendBuffer, SEND_BUFFER_SIZE);
         rf95.waitPacketSent();
         digitalWrite(PIN_LED, LOW);
 
@@ -291,8 +301,3 @@ void sendToP5(bool _bSendToP5){
         bSendToP5 = false;
     }
 }
-
-// // timer function to flagging
-// void tSendToAction() { bSendToAction = true; Serial.println("SENDACTION!");}
-// void tRequestToAction()  { bRequestToAction = true;}
-// void tSendToP5()     { bSendToP5 = true;}    
