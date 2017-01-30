@@ -7,7 +7,7 @@
  *  
  *  TODO : 
  *	[ ] : CC license attachment
- *  [ ] : thermal read and write To P5 via serial
+ *  [ ] : thermal read and write To control Module via LoRa
  *  [V] : servo Direction Ctrl
  *  
  *  this code works with Adafruit feather basic module
@@ -33,60 +33,81 @@
 #include <Servo.h>
 
 // define pintouts
-#define PIN_SOLENOID_1		A0
-#define PIN_SOLENOID_2		A1 
-#define PIN_SOLENOID_3 		A2
-#define PIN_EGG_BREAKER 	A3 
-#define PIN_SIREN			A4
+const int PIN_SOLENOID_1		= A0;
+const int PIN_SOLENOID_2		= A1;
+const int PIN_SOLENOID_3 		= A2;
+const int PIN_EGG_BREAKER 		= A3; 
+const int PIN_SIREN				= A4;
 
 // thremal SPI pin
-#define PIN_GPS_PPS			2	// as interrupt pin #2
-#define PIN_HOT_WATER		3	// SCL
+const int PIN_GPS_PPS			= 2;	// as interrupt pin #2
+const int PIN_HOT_WATER			= 3;	// SCL
 
-#define PIN_DROP_MBALL		5
-#define PIN_HEATING_MBALL	6
-#define PIN_SERVO_PWM		9
-#define PIN_WATER_TEMP_CS	10
-#define PIN_BUZZER_PWM		11
-#define PIN_NOODLE_TEMP_CS	12
-#define PIN_LED 			13
+const int PIN_DROP_MBALL		= 5;
+const int PIN_HEATING_MBALL		= 6;
+const int PIN_SERVO_PWM			= 9;
+const int PIN_WATER_TEMP_CS		= 10;
+const int PIN_BUZZER_PWM		= 11;
+const int PIN_NOODLE_TEMP_CS	= 12;
+const int PIN_LED 				= 13;
 
-#define RECV_BUFFER_SIZE	9
-#define IN_MESSAGE_SIZE		RECV_BUFFER_SIZE - 2
+
+const int IN_MESSAGE_SIZE		= 9;
+const int OUT_MESSAGE_SIZE		= 8;
+
+const int RECV_BUFFER_SIZE		= IN_MESSAGE_SIZE+3;
+const int SEND_BUFFER_SIZE		= OUT_MESSAGE_SIZE+2;
+
 
 // LoRa SETTING
 // LoRa SETTING
-#define RFM95_CS			8
-#define RFM95_RST			4
-#define RFM95_INT			7
+const int RFM95_CS				= 8;
+const int RFM95_RST				= 4;
+const int RFM95_INT				= 7;
 
 // LoRa FREQ 
-#define RF95_FREQ			433.0	
+const float RF95_FREQ			= 433.0	;
 
-#define NUM_OF_BYPASSOUT 	7
-#define SEND_BUFFER_SIZE	51
-#define BUZZER_MICROHERZ	250
-#define BUZZER_DUTYCYCLE	0.5
+const int NUM_OF_BYPASSOUT 		= 7;
+const int BUZZER_MICROHERZ		= 250;
+const int BUZZER_DUTYCYCLE		= 0.5;
 
 
 Adafruit_MAX31856 waterThermal = Adafruit_MAX31856(PIN_WATER_TEMP_CS);
 Adafruit_MAX31856 noodleThermal = Adafruit_MAX31856(PIN_NOODLE_TEMP_CS);
+
+
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 Servo servo;
 
-uint8_t getBuffer[RECV_BUFFER_SIZE];
+uint8_t recvBuffer[RECV_BUFFER_SIZE];
+char sendBuffer[SEND_BUFFER_SIZE];
+
 bool controlBtnStatus[IN_MESSAGE_SIZE];
 int outputBypassPinList[NUM_OF_BYPASSOUT];
 bool bBuzzerHW;
 
+typedef union{
+	float floatPoint;
+	byte bin[4];
+} temp;
 
-float waterTemp, noodleTemp;
-
+temp waterTemp, noodleTemp;
 
 void setup() {
+	pinMode(RFM95_RST, OUTPUT);
+	digitalWrite(RFM95_RST, HIGH);
+	
 	Serial.begin(115200);
+	delay(1000);
 
 	bBuzzerHW = false;
+
+
+	// init temps
+	waterTemp.floatPoint = 0.f;
+	noodleTemp.floatPoint = 0.f;
+
 	// init MAX31856 
 	waterThermal.begin();
 	noodleThermal.begin();
@@ -114,19 +135,21 @@ void setup() {
 		pinMode(outputBypassPinList[i], OUTPUT);
 	}
 
+	// init sendBuffer
+	for(int i=0; i<SEND_BUFFER_SIZE; i++){
+		sendBuffer[i] = 'N';
+	}
+
 	// PIN I/O setting
 	pinMode(PIN_SERVO_PWM, OUTPUT);		// PWM : noodle UP/DOWN
 	pinMode(PIN_BUZZER_PWM, OUTPUT);		// PWM : BUZZER
 	pinMode(PIN_LED, OUTPUT);
 	
 
-	// init messageFromActionMOdule
+	// init messageFromActionModule
 	for(int i=0; i<RECV_BUFFER_SIZE; i++){
-		getBuffer[i] = 0;
+		recvBuffer[i] = 0;
 	}
-
-	waterTemp = 0.f;
-	noodleTemp = 0.f;
 }
 
 void loop() {
@@ -134,14 +157,21 @@ void loop() {
 
 	// print thermal temp
 	// Serial.print(thermal.readThermocoupleTemperature());
-	getTempData();	
-	// getMessage();
-	// action();
 
-	printTempData();
-	buzzerON();
+	getTempData();
+	updateSendBuffer();
+	sendToControlModule();
+
+	if(rf95.waitAvailableTimeout(100)){
+		receiveFromControlModule();	
+	} else {
+		Serial.println("No Reply");
+	}
 	
+	getControlBtnStatus();
+	delay(100);
 }
+	
 
 void initLoRa(){
 	Serial.println("Feather LoRa RX Test!");
@@ -189,14 +219,7 @@ void buzzer(){
 	// else					buzzerOff();
 }
 
-void getTempData(){
-	// thermal ERROR HANDLING -> redefinition TODO
-	uint8_t faultCheck_Water = waterThermal.readFault();
-	uint8_t faultCheck_Noodle = noodleThermal.readFault();
 
-	if (!faultCheck_Water) 		waterTemp = waterThermal.readThermocoupleTemperature();
-	if (!faultCheck_Noodle)		noodleTemp = noodleThermal.readThermocoupleTemperature();
-}
 
 int generateServoDirectionFlag(){
 	// UP/DOWN all pressed or nothing pressed
@@ -218,20 +241,20 @@ void noodleUpDown(int _rotateCtrl){
 
 void action(){
 	for(int i=0; i<RECV_BUFFER_SIZE-1; i++){
-		if(getBuffer[i] == 1)	digitalWrite(outputBypassPinList[i], HIGH);
+		if(recvBuffer[i] == 1)	digitalWrite(outputBypassPinList[i], HIGH);
 		else 					digitalWrite(outputBypassPinList[i], LOW);
 	}
 
-	noodleUpDown(getBuffer[RECV_BUFFER_SIZE-1]);
+	noodleUpDown(recvBuffer[RECV_BUFFER_SIZE-1]);
 }
 
 
 void receiveFromControlModule(){
 	if(rf95.available()){
-		uint8_t getBufferLen = sizeof(getBuffer);
+		uint8_t recvBufferLen = sizeof(recvBuffer);
 
 		// PARSER 
-		if(rf95.recv((char *)getBuffer, &getBufferLen)){
+		if(rf95.recv((char *)recvBuffer, &recvBufferLen)){
 			digitalWrite(PIN_LED, HIGH);
 			rf95.waitPacketSent();
 			digitalWrite(PIN_LED, LOW);
@@ -240,25 +263,61 @@ void receiveFromControlModule(){
 }
 
 void getControlBtnStatus(){
-	if(getBuffer[0] == '/'){
-		digitalWrite(PIN_LED, HIGH);
-		for(int i=1; i<IN_MESSAGE_SIZE-1; i++){
-			if((char)getBuffer[i] == '1')		controlBtnStatus[i-1] = true;
-			else								controlBtnStatus[i-1] = false;
+	if(recvBuffer[0] == '/'){
+		if(recvBuffer[1] == 'B'){
+			digitalWrite(PIN_LED, HIGH);
+		for(int i=2; i<IN_MESSAGE_SIZE; i++){
+			if((char)recvBuffer[i] == '1')		controlBtnStatus[i-2] = true;
+			else								controlBtnStatus[i-2] = false;
 		}
 		digitalWrite(PIN_LED, LOW);
+		} 
+
+		if(recvBuffer[1] == 'T'){
+			updateSendBuffer();
+			sendToControlModule();
+		}
+		
 	}
+}
+
+void getTempData(){
+	// thermal ERROR HANDLING -> redefinition TODO
+	uint8_t faultCheck_Water = waterThermal.readFault();
+	uint8_t faultCheck_Noodle = noodleThermal.readFault();
+
+	if (!faultCheck_Water) 		waterTemp.floatPoint = waterThermal.readThermocoupleTemperature();
+	if (!faultCheck_Noodle)		noodleTemp.floatPoint = noodleThermal.readThermocoupleTemperature();
+}
+
+
+void updateSendBuffer(){
+	/*
+		sendBuffer[] = { /, waterTemp.bin[0], waterTemp.bin[1] ... noodleTemp.bin[0], noodleTemp.bin[1]... } 
+	*/
+	sendBuffer[0] = '/';
+	for(int i=0; i<OUT_MESSAGE_SIZE/2; i++){
+		sendBuffer[i+1] = waterTemp.bin[i];
+		sendBuffer[i+5] = noodleTemp.bin[i];
+	}
+	sendBuffer[SEND_BUFFER_SIZE-1] = 0;
 }
 
 void sendToControlModule(){
 	// TODO : send message to controlModule
 	// waterTemp, noodleTemp, pps update signal
+
+	digitalWrite(PIN_LED, HIGH);
+
+	rf95.send((uint8_t *) sendBuffer, SEND_BUFFER_SIZE);
+	rf95.waitPacketSent();
+	digitalWrite(PIN_LED, LOW);
 }
 
 void printTempData(){
-	Serial.print("WaterTemp : ");	Serial.print(waterTemp, 4);
+	Serial.print("WaterTemp : ");	Serial.print(waterTemp.floatPoint, 4);
 	Serial.print("\t");
-	Serial.print("NoodleTemp: "); 	Serial.print(noodleTemp, 4);
+	Serial.print("NoodleTemp: "); 	Serial.print(noodleTemp.floatPoint, 4);
 	Serial.println();
 }
 
