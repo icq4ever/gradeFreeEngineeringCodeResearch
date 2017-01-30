@@ -55,6 +55,7 @@ void setup() {
 	// init MAX31856 
 	waterThermal.begin();
 	waterThermal.setThermocoupleType(MAX31856_TCTYPE_K);
+	delay(1000);
 
 	initLoRa();
 

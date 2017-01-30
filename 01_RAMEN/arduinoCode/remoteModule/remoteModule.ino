@@ -23,15 +23,19 @@
  *  
  */
 
+
+// adafruit common sensor library download ->  https://github.com/adafruit/Adafruit_Sensor
+
+
 #include <SPI.h>
-#include <RH_RF95.h>
-#include <Adafruit_MAX31856.h>     // thermal module
+#include <RH_RF95.h>				// RF module. 		library download -> 
+#include <Adafruit_MAX31856.h>     	// thermal module 	library download -> https://github.com/adafruit/Adafruit_MAX31856
 #include <Servo.h>
 
 // define pintouts
 #define PIN_SOLENOID_1		A0
 #define PIN_SOLENOID_2		A1 
-#define PIN_SOLENIOD_3 		A2
+#define PIN_SOLENOID_3 		A2
 #define PIN_EGG_BREAKER 	A3 
 #define PIN_SIREN			A4
 
@@ -59,16 +63,21 @@
 // LoRa FREQ 
 #define RF95_FREQ			433.0	
 
+#define NUM_OF_BYPASSOUT 	7
 #define SEND_BUFFER_SIZE	51
+#define BUZZER_MICROHERZ	250
+#define BUZZER_DUTYCYCLE	0.5
 
-Adafruit_MAX31856 waterThermal = Adafruit_MAX31856(PIN_THERMAL_1_CS);
-Adafruit_MAX31856 noodleThermal = Adafruit_MAX31856(PIN_THERMAL_2_CS);
-RH_RF95 rf95(RFM95CS, RFM95_INT);
+
+Adafruit_MAX31856 waterThermal = Adafruit_MAX31856(PIN_WATER_TEMP_CS);
+Adafruit_MAX31856 noodleThermal = Adafruit_MAX31856(PIN_NOODLE_TEMP_CS);
+RH_RF95 rf95(RFM95_CS, RFM95_INT);
 Servo servo;
 
 uint8_t getBuffer[RECV_BUFFER_SIZE];
 bool controlBtnStatus[IN_MESSAGE_SIZE];
-int outputByPassPinList[NUM_OF_BYPASSOUT];
+int outputBypassPinList[NUM_OF_BYPASSOUT];
+bool bBuzzerHW;
 
 
 float waterTemp, noodleTemp;
@@ -77,18 +86,20 @@ float waterTemp, noodleTemp;
 void setup() {
 	Serial.begin(115200);
 
+	bBuzzerHW = false;
 	// init MAX31856 
 	waterThermal.begin();
 	noodleThermal.begin();
 	waterThermal.setThermocoupleType(MAX31856_TCTYPE_K);
-	noodleThermal.setThermocoupleType(MAX31956_TCTYPE_K);
+	noodleThermal.setThermocoupleType(MAX31856_TCTYPE_K);
 
-	servo.sttach(PIN_SERVO_PWM_1);
+	servo.attach(PIN_SERVO_PWM);
 
 	initLoRa();
 
+
 	// attachInterrupt : GPS_PPS 
-	attachInterrupt(GPS_PPS, pps_interrupt, RISING);
+	attachInterrupt(PIN_GPS_PPS, pps_interrupt, RISING);
 
 	outputBypassPinList[0] = PIN_SOLENOID_1;
 	outputBypassPinList[1] = PIN_SOLENOID_2;
@@ -100,19 +111,18 @@ void setup() {
 	
 	// bypass Pinout set
 	for(int i=0; i<NUM_OF_BYPASSOUT; i++){
-		pinMode(outputByPassPinList[i], OUTPUT);
+		pinMode(outputBypassPinList[i], OUTPUT);
 	}
 
 	// PIN I/O setting
-	pinMode(PIN_SIREN_1, OUTPUT);
-	pinMode(PIN_SERVO_PWM_1, OUTPUT);		// PWM : noodle UP/DOWN
+	pinMode(PIN_SERVO_PWM, OUTPUT);		// PWM : noodle UP/DOWN
 	pinMode(PIN_BUZZER_PWM, OUTPUT);		// PWM : BUZZER
 	pinMode(PIN_LED, OUTPUT);
 	
 
 	// init messageFromActionMOdule
-	for(int i=0; i<NUM_OF_IN_MESSAGE; i++){
-		incommingMessage[i] = 0;
+	for(int i=0; i<RECV_BUFFER_SIZE; i++){
+		getBuffer[i] = 0;
 	}
 
 	waterTemp = 0.f;
@@ -125,14 +135,22 @@ void loop() {
 	// print thermal temp
 	// Serial.print(thermal.readThermocoupleTemperature());
 	getTempData();	
-	getMessage();
-	action();
+	// getMessage();
+	// action();
+
+	printTempData();
+	buzzerON();
+	
 }
 
 void initLoRa(){
 	Serial.println("Feather LoRa RX Test!");
 
-	manualLoRaReset();
+	// manual LoRa reset
+	digitalWrite(RFM95_RST, LOW);
+	delay(10);
+	digitalWrite(RFM95_RST, HIGH);
+	delay(10);
 
 	while(!rf95.init()){
 		Serial.println("LoRa radio init faild");
@@ -167,6 +185,8 @@ void siren(){
 void buzzer(){
 	// trigger ?
 	// how ?
+	// if (condition)		buzzerOn();
+	// else					buzzerOff();
 }
 
 void getTempData(){
@@ -180,11 +200,11 @@ void getTempData(){
 
 int generateServoDirectionFlag(){
 	// UP/DOWN all pressed or nothing pressed
-	if(inputBtnStatus[inputPinList[8]] && inputBtnStatus[inputList[9]] || !inputBtnStatus[inputPinList[8]] && !inputBtnStatus[inputList[9]]){
+	if((controlBtnStatus[outputBypassPinList[8]] && controlBtnStatus[outputBypassPinList[9]]) || (!controlBtnStatus[outputBypassPinList[8]] && !controlBtnStatus[outputBypassPinList[9]])){
 		return 2;	// STOP
 	} else {
-		if(inputBtnStatus[inputPinList[8]])		return 1;	// up pressed : RIGHT
-		else 									return 3;	// down pressed : LEFT
+		if(controlBtnStatus[outputBypassPinList[8]])		return 1;	// up pressed : RIGHT
+		else 												return 3;	// down pressed : LEFT
 	}
 }
 
@@ -197,12 +217,12 @@ void noodleUpDown(int _rotateCtrl){
 }
 
 void action(){
-	for(int i=0; i<NUM_OF_IN_MESSAGE-1; i++){
-		if(incommingMessage[i] == 1)	digitalWrite(outputBypassPinList[i], HIGH);
-		else 							digitalWRite(outputBypassPinList[i], LOW);
+	for(int i=0; i<RECV_BUFFER_SIZE-1; i++){
+		if(getBuffer[i] == 1)	digitalWrite(outputBypassPinList[i], HIGH);
+		else 					digitalWrite(outputBypassPinList[i], LOW);
 	}
 
-	noodleUpDown(incommingMessage[NUM_OF_IN_MESSAGE-1]);
+	noodleUpDown(getBuffer[RECV_BUFFER_SIZE-1]);
 }
 
 
@@ -212,9 +232,9 @@ void receiveFromControlModule(){
 
 		// PARSER 
 		if(rf95.recv((char *)getBuffer, &getBufferLen)){
-			digitalWrite(LED, HIGH);
+			digitalWrite(PIN_LED, HIGH);
 			rf95.waitPacketSent();
-			digitalWrite(LED, LOW);
+			digitalWrite(PIN_LED, LOW);
 		}
 	}
 }
@@ -233,4 +253,24 @@ void getControlBtnStatus(){
 void sendToControlModule(){
 	// TODO : send message to controlModule
 	// waterTemp, noodleTemp, pps update signal
+}
+
+void printTempData(){
+	Serial.print("WaterTemp : ");	Serial.print(waterTemp, 4);
+	Serial.print("\t");
+	Serial.print("NoodleTemp: "); 	Serial.print(noodleTemp, 4);
+	Serial.println();
+}
+
+void buzzerON(){
+	// hz  4Khz
+	// Duty Ratio : 1:1
+	// duty cycle : 50%
+	if((micros()%BUZZER_MICROHERZ*BUZZER_DUTYCYCLE) < BUZZER_MICROHERZ*BUZZER_DUTYCYCLE)	bBuzzerHW = true;
+	else																					bBuzzerHW = false;
+	analogWrite(A4, bBuzzerHW);
+}
+
+void buzzerOFF(){
+	bBuzzerHW = false;
 }
