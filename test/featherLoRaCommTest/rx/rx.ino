@@ -91,7 +91,7 @@ void receiveFromControlModule(){
 		
 		// digitalWrite(13, LOW);
 	} else {
-		// Serial.println("Receie failed");
+		Serial.println("Receive failed");
 	}
 	
 }

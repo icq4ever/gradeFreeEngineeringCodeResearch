@@ -29,7 +29,12 @@
 // LoRa FREQ 
 #define RF95_FREQ			433.0	
 
-#define SEND_BUFFER_SIZE	51
+#define IN_MESSAGE_SIZE		4
+#define OUT_MESSAGE_SIZE	10	// button status
+
+#define RECV_BUFFER_SIZE	IN_MESSAGE_SIZE+2
+#define SEND_BUFFER_SIZE	OUT_MESSAGE_SIZE+2
+
 
 Adafruit_MAX31856 waterThermal = Adafruit_MAX31856(PIN_WATER_TEMP_CS);
 Adafruit_MAX31856 noodleThermal = Adafruit_MAX31856(PIN_NOODLE_TEMP_CS);

@@ -13,7 +13,7 @@ RH_RF95 rf95(RFM95_CS, RFM95_INT);
 #define IN_MESSAGE_SIZE			2
 #define OUT_MESSAGE_SIZE		10		// button status
 
-#define RECEIVE_BUFFER_SIZE		IN_MESSAGE_SIZE+2
+#define RECV_BUFFER_SIZE		IN_MESSAGE_SIZE+2
 #define SEND_BUFFER_SIZE		OUT_MESSAGE_SIZE+2
 
 
@@ -34,7 +34,7 @@ void setup(){
 
 	initLoRa();
 
-	for(int i=0; i<OUT_MESSAGE_SIZE; i++){
+	for(int i=0; i<SEND_BUFFER_SIZE; i++){
 		sendBuffer[i] = 'N';
 	}
 }
@@ -80,7 +80,7 @@ void initLoRa(){
 void sendToActionModule(){
 	digitalWrite(13, HIGH);
 
-	rf95.send((uint8_t *)sendBuffer, OUT_MESSAGE_SIZE);
+	rf95.send((uint8_t *)sendBuffer, SEND_BUFFER_SIZE);
 	rf95.waitPacketSent();
 	Serial.println("SENT!");
 	digitalWrite(13, LOW);
