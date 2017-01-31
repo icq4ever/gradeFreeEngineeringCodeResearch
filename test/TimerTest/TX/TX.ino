@@ -40,7 +40,7 @@ typedef union{
 
 temp waterTemp, noodleTemp;
 // volatile unsigned long tickCount = 0;
-volatile unsigned long tcSendToAction, tcRequestToAction, tcSendToP5;
+volatile unsigned long tickCount, tcSendToAction, tcRequestToAction, tcSendToP5;
 
 void tickCountUp(){
 	tcSendToAction++;
@@ -245,11 +245,11 @@ void sendToP5(bool _bSendToP5){
     // start?
     // waterTemp, noodleTemp
     // pps update message
-    if( _bSendToP5){
-        if(digitalRead(PIN_START_BTN)){
-            Serial.println("S");
-        }
-        bSendToP5 = false;
-        tcSendToP5 = 0;
-    }
+//     if( _bSendToP5){
+//         if(digitalRead(PIN_START_BTN)){
+//             Serial.println("S");
+//         }
+//         bSendToP5 = false;
+//         tcSendToP5 = 0;
+//     }
 }
