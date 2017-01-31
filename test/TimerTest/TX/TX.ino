@@ -42,6 +42,12 @@ temp waterTemp, noodleTemp;
 // volatile unsigned long tickCount = 0;
 volatile unsigned long tcSendToAction, tcRequestToAction, tcSendToP5;
 
+void tickCountUp(){
+	tcSendToAction++;
+	tcRequestToAction++;
+	tcSendToP5++;
+}
+
 void setup(){
 	pinMode(RFM95_RST, OUTPUT);
 	digitalWrite(RFM95_RST, HIGH);
@@ -73,10 +79,13 @@ void setup(){
 }
 
 void loop(){
-	unsigned long tickCountCopy;
+	unsigned long tickCountCopy, tcSendToActionCopy, tcRequestToActionCopy, tcSendToP5Copy;
 
     noInterrupts();
-    tickCountCopy = tickCount;
+    // tickCountCopy = tickCount;
+    tcSendToActionCopy = tcSendToAction;
+    tcRequestToActionCopy = tcRequestToAction;
+    tcSendToP5Copy = tcSendToP5;
     interrupts();
 
     if(tickCountCopy> 2) {  // 20ms
@@ -173,6 +182,7 @@ void sendToActionModule(bool _bSendToAction){
         digitalWrite(PIN_LED, LOW);
 
         bSendToAction = false;
+        tcSendToAction = 0;
     }
 }
 
@@ -188,10 +198,11 @@ void requestToActionModule(bool _bRequestToAction){
         receiveFromActionModule();
 
         bRequestToAction = false;
+        tcRequestToAction = 0;
     }
 }
 
-oid receiveFromActionModule(){
+void receiveFromActionModule(){
     // TODO : receive message from actionodule
     // waterTemp, noodleTemp, pps update signal
     if(rf95.waitAvailableTimeout(500)){
@@ -209,7 +220,7 @@ oid receiveFromActionModule(){
     }
 }
 
-oid getTempFromActionModule(){
+void getTempFromActionModule(){
     if(recvBuffer[0] == '/'){
         waterTemp.bin[0] = recvBuffer[1];
         waterTemp.bin[1] = recvBuffer[2];
@@ -239,5 +250,6 @@ void sendToP5(bool _bSendToP5){
             Serial.println("S");
         }
         bSendToP5 = false;
+        tcSendToP5 = 0;
     }
 }
