@@ -71,9 +71,13 @@ typedef union{
 
 temp waterTemp, noodleTemp;
 volatile unsigned long tickCount = 0;
+volatile tcSendToAction, tcRequestToAction, tcSendToP5;
 
 void tickCountUp(){
     tickCount = tickCount + 1;
+    tcSendToAction++;
+    tcRequestToAction++;
+    tcSendToAction++;
 }
 
 void setup() {
@@ -84,6 +88,7 @@ void setup() {
 
     // init timer flags
     bSendToAction = bRequestToAction = bSendToP5 = false;
+    tcSendToAction = tcRequestToAction = tcSendToAction = 0;
 
     // Timer1.initialize(10000);        // 10ms
     Timer1.initialize(10000);
@@ -131,17 +136,17 @@ void loop() {
     tickCountCopy = tickCount;
     interrupts();
 
-    if(tickCountCopy%2 == 0) {  // 20ms
+    if(tickCountCopy>2) {  // 20ms
         bSendToAction = true;
         // Serial.print("action ");
     } 
 
-    if(tickCountCopy%10 == 0){  // 100ms
+    if(tickCountCopy>10){  // 100ms
         bRequestToAction = true;
         // Serial.print("request ");
     }
 
-    if(tickCountCopy%5 == 0){
+    if(tickCountCopy>5){
         bSendToP5 = true;
         // Serial.print("P5 ");
     }
