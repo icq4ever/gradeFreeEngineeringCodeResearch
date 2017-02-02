@@ -18,7 +18,7 @@ const int NUM_OF_INPUT      = 10;
 const int IN_MESSAGE_SIZE   = 8;
 const int RECV_BUFFER_SIZE  = IN_MESSAGE_SIZE+2;
 
-const int OUT_MESSAGE_SIZE  = 9;
+const int OUT_MESSAGE_SIZE  = 12;
 const int SEND_BUFFER_SIZE  = OUT_MESSAGE_SIZE+3;
 
 // singleton instance of the radio driver
@@ -40,7 +40,7 @@ typedef union{
 
 temp waterTemp, noodleTemp;
 // volatile unsigned long tickCount = 0;
-volatile unsigned long tickCount, tcSendToAction, tcRequestToAction, tcSendToP5;
+volatile unsigned long  tcSendToAction, tcRequestToAction, tcSendToP5;
 
 void tickCountUp(){
 	tcSendToAction++;
@@ -79,39 +79,30 @@ void setup(){
 }
 
 void loop(){
-	unsigned long tickCountCopy, tcSendToActionCopy, tcRequestToActionCopy, tcSendToP5Copy;
+	unsigned long tcSendToActionCopy, tcRequestToActionCopy, tcSendToP5Copy;
 
-    noInterrupts();
-    // tickCountCopy = tickCount;
-    tcSendToActionCopy = tcSendToAction;
-    tcRequestToActionCopy = tcRequestToAction;
-    tcSendToP5Copy = tcSendToP5;
-    interrupts();
+//    noInterrupts();
+//    // tickCountCopy = tickCount;
+//    tcSendToActionCopy = tcSendToAction;
+//    tcRequestToActionCopy = tcRequestToAction;
+//    tcSendToP5Copy = tcSendToP5;
+//    interrupts();
 
-    if(tickCountCopy> 2) {  // 20ms
-        bSendToAction = true;
-        // Serial.print("action ");
-    } 
-
-    if(tickCountCopy>10){  // 100ms
-        bRequestToAction = true;
-        // Serial.print("request ");
-    }
-
-    if(tickCountCopy>5){
-        bSendToP5 = true;
-        // Serial.print("P5 ");
-    }
+    if(tcSendToAction> 2) {  bSendToAction = true; }  // 20ms
+    if(tcRequestToAction>20){ bRequestToAction = true; } // 100ms
+    if(tcSendToP5>5){ bSendToP5 = true; } // 50ms
 
     updateBtnStatus();
-    updateSendBuffer();
+    updateSendBuffer(bRequestToAction);
     sendToActionModule(bSendToAction);
     requestToActionModule(bRequestToAction);
+    
 
-    getTempFromActionModule();
-    // printBtnStatus();
+//    getTempFromActionModule();
+//     printBtnStatus();
 
-    printTemp();
+//    printTemp();
+    Serial.println(tcRequestToAction);
 }
 
 void initLoRa(){
@@ -158,7 +149,7 @@ void printBtnStatus(){  // message
     Serial.println();
 }
 
-void updateSendBuffer(){
+void updateSendBuffer(bool _bRequestToAction){
     /*
         sendBuffer[] = { /, B, 1, 0, 1, 0, 1, 1, 1, 1...} 
     */
@@ -169,12 +160,24 @@ void updateSendBuffer(){
         if(inputBtnStatus[i])   sendBuffer[i+2] = '1';
         else                    sendBuffer[i+2] = '0';
     }
-    sendBuffer[SEND_BUFFER_SIZE-1] = 0;
+    
+
+    if(bRequestToAction){
+        sendBuffer[SEND_BUFFER_SIZE-4] = '/';
+        sendBuffer[SEND_BUFFER_SIZE-3] = 'T';
+        sendBuffer[SEND_BUFFER_SIZE-2] = '1';
+        sendBuffer[SEND_BUFFER_SIZE-1] = 0;
+    } else {
+        sendBuffer[SEND_BUFFER_SIZE-4] = '/';
+        sendBuffer[SEND_BUFFER_SIZE-3] = 'T';
+        sendBuffer[SEND_BUFFER_SIZE-2] = '0';
+        sendBuffer[SEND_BUFFER_SIZE-1] = 0;
+    }
 }
 
 void sendToActionModule(bool _bSendToAction){
     if(_bSendToAction){
-        // updateSendBuffer();
+//        Serial.print("Action ");
         digitalWrite(PIN_LED, HIGH);
         
         rf95.send((uint8_t *)sendBuffer, SEND_BUFFER_SIZE);
@@ -188,37 +191,37 @@ void sendToActionModule(bool _bSendToAction){
 
 void requestToActionModule(bool _bRequestToAction){
     if(_bRequestToAction){
-        char requestPacket[3] = "/T";
-        requestPacket[2] = 0;
+//        Serial.print("request ");
+      
+        digitalWrite(PIN_LED, HIGH);
+//        char requestPacket[2] = "/T";
+////        requestPacket[2] = 0;
+//
+//        rf95.send((uint8_t *)requestPacket, 2);
 
-        rf95.send((uint8_t *)requestPacket, 3);
-
-        rf95.waitPacketSent();
         //wait for a reply
-        receiveFromActionModule();
-
-        bRequestToAction = false;
-        tcRequestToAction = 0;
-    }
-}
-
-void receiveFromActionModule(){
-    // TODO : receive message from actionodule
-    // waterTemp, noodleTemp, pps update signal
-    if(rf95.waitAvailableTimeout(500)){
-        uint8_t recvBufferLen = sizeof(recvBuffer);
-
-        if(rf95.recv((char *)recvBuffer, &recvBufferLen)){
-            // rf95.waitPacketSent();   // ??
-            Serial.println("Received OK!");
+        if(rf95.waitAvailableTimeout(1000)){
+            uint8_t recvBufferLen = sizeof(recvBuffer);
+    
+            if(rf95.recv((char *)recvBuffer, &recvBufferLen)){
+                // rf95.waitPacketSent();   // ??
+                Serial.println("Received OK!");
+            } else {
+                // receive fail routine. kill switch?
+                Serial.println("Receive failed");
+            }
         } else {
-            // receive fail routine. kill switch?
-            Serial.println("Receive failed");
+            Serial.println("No reply..");
         }
-    } else {
-        Serial.println("No reply..");
+
+        digitalWrite(PIN_LED, LOW);
+        
+        tcRequestToAction = 0;
+        bRequestToAction = false;
+        
     }
 }
+
 
 void getTempFromActionModule(){
     if(recvBuffer[0] == '/'){
@@ -238,6 +241,9 @@ void printTemp(){
     Serial.print(" : ");
     Serial.print(noodleTemp.floatPoint, 4);
     Serial.println();
+
+    waterTemp.floatPoint = 0.f;
+    noodleTemp.floatPoint = 0.1f;
 }
 
 void sendToP5(bool _bSendToP5){
@@ -246,6 +252,7 @@ void sendToP5(bool _bSendToP5){
     // waterTemp, noodleTemp
     // pps update message
 //     if( _bSendToP5){
+//           Serial.print("P5 ");
 //         if(digitalRead(PIN_START_BTN)){
 //             Serial.println("S");
 //         }
