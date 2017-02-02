@@ -1,53 +1,30 @@
-/* 
- *  RAMEN REMOTE CONTROL MODULE FIRMWARE
- *  by GradeFreeEngineering Team
- *  
- *  Song Hojun 
- *  Yi Donghoon
- *  
- *  TODO : 
- *	[ ] : CC license attachment
- *  [V] : thermal read Check
- *  [V] : servo Direction Ctrl
- *  [ ] : gps pps pulse read
- *  
- *  this code works with Adafruit feather basic module
- *  
- *  - 1 interrupt in for GPS PPS calibration
- *  - 1 D-in for thermal sensor Adafruit MAX31856 (HW SPI)
- *  - 3 D-out for solenoid blower
- *  - 1 D-out for siren control 
- *  - 1 D-out for hearing metal ball
- *  - 1 D-out for release metal ball
- *  - 1 D-out for eggbreaking
- *  - 1 A-out for control servo direction ( 0 : LEFT / 90 : STOP / 100 : RIGHT)
- *  
- */
-
 #include <SPI.h>
 #include <RH_RF95.h>
 #include <Adafruit_MAX31856.h>     // thermal module
 
+const int PIN_LED 			= 13;
 
-#define PIN_WATER_TEMP_CS	10
-#define PIN_LED 			13
+const int RFM95_CS			= 8;
+const int RFM95_RST			= 4;
+const int RFM95_INT			= 7;
 
-
-// LoRa SETTING
-// LoRa SETTING
-#define RFM95_CS			8
-#define RFM95_RST			4
-#define RFM95_INT			7
+const int PIN_WATER_TEMP_CS	 = 10;
+const int PIN_NOODLE_TEMP_CS = 12;
 
 // LoRa FREQ 
-#define RF95_FREQ			433.0	
+const float RF95_FREQ		= 433.0;
 
 Adafruit_MAX31856 waterThermal = Adafruit_MAX31856(PIN_WATER_TEMP_CS);
+Adafruit_MAX31856 noodleThermal = Adafruit_MAX31856(PIN_NOODLE_TEMP_CS);
 
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
-float waterTemp;
+typedef union{
+	float tempFloat;
+	byte tempBin[4];
+} temperature;
 
+temperature waterTemp, noodleTemp;
 
 void setup() {
 	Serial.begin(115200);
@@ -55,11 +32,16 @@ void setup() {
 	// init MAX31856 
 	waterThermal.begin();
 	waterThermal.setThermocoupleType(MAX31856_TCTYPE_K);
+	noodleThermal.begin();
+	noodleThermal.setThermocoupleType(MAX31856_TCTYPE_K);
+
 	delay(1000);
 
 	initLoRa();
 
-	waterTemp = 0.f;
+	waterTemp.tempFloat = 0.f;
+	noodleTemp.tempFloat = 0.f;
+
 }
 
 void loop() {
@@ -69,11 +51,10 @@ void loop() {
 	// Serial.print(thermal.readThermocoupleTemperature());
 
 	getTempData();
-	Serial.println(waterTemp);
-	delay(100);
+	printTempData();
 }
 
-void initLoRa(){
+void initLoRa() { // init
 	Serial.println("Feather LoRa RX Test!");
 
 	// manual LoRa reset
@@ -103,25 +84,18 @@ void initLoRa(){
 	rf95.setTxPower(23, false);
 }
 
-void pps_interrupt(){
-	// TODO : synchronize with PPS from GPS breakout board
-}
-
-void siren(){
-	// TODO :
-	// trigger?
-}
-
-void buzzer(){
-	// trigger ?
-	// how ?
-}
-
 void getTempData(){
 	// thermal ERROR HANDLING -> redefinition TODO
-	uint8_t fault = waterThermal.readFault();
-	if (!fault) {
-		// get temp 
-		waterTemp = waterThermal.readThermocoupleTemperature();
-	}
+	uint8_t faultCheckWater = waterThermal.readFault();
+	uint8_t faultCheckNoodle = noodleThermal.readFault();
+
+	if (!faultCheckWater) 	waterTemp.tempFloat = waterThermal.gfeThermocoupleTemperature();
+	if (!faultCheckNoodle)	noodleTemp.tempFloat = noodleThermal.gfeThermocoupleTemperature();
+}
+
+void printTempData(){
+	Serial.print(waterTemp.tempFloat, 4);
+	Serial.print(", ");
+	Serial.print(noodleTemp.tempFloat, 4);
+	Serial.println();
 }
