@@ -168,6 +168,9 @@ void loop() {
 }
 
 void initLoRa(){
+    pinMode(RFM95_RST, OUTPUT);
+    digitalWrite(RFM_RST, HIGH);
+    
     Serial.println("Feather LoRa TX Test!");
 
     // manual LoRa reset
