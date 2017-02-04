@@ -209,13 +209,19 @@ void drawRealThermalGraph(float _width, float _height, float _margin){
 void serialEvent(Serial port){
 	String inString = feather.readStringUntil('\n');
 
-	if(inString != null){
-		inString = trim(inString);
 
-		if(inString.startsWith("S")){
-			startTimer = millis();
-		}
-	}
+	println(inString);
+	// if(inString != null){
+	// 	inString = trim(inString);
+
+	// 	if(inString.startsWith("S")){
+	// 		startTimer = millis();
+	// 	}
+	// }
+
+	// if(inString!=null){
+	// 	inString = 
+	// }
 }
 
 void keyReleased(){
