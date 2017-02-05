@@ -59,7 +59,7 @@ void draw(){
     // drawScreen2(1920, 0);
     btnIndicator.draw(buttonStatus, 1500, 40);  
 
-    drawTimer(800, 40); // draw Timer
+    drawTimer(1400, 40); // draw Timer
 }
 
 
@@ -75,7 +75,7 @@ void drawScreen1(float _x, float _y){
     textAlign(CENTER, CENTER);
     textFont(displayCheckFont);
     fill(255);
-    text("1", width/4, 600);
+    // text("1", width/4, 600);
     drawScreenTitle("TEMPERATURE", #FFFF00);
 
     {
@@ -163,11 +163,12 @@ void drawThermalAxis(float _width, float _height, float _margin){
     }
 
     // thermal degree (Y_)
-    for(int i=0; i<61; i++){
+    int detailLevel = 14;
+    for(int i=0; i<detailLevel*5+1; i++){
         if(i%5 == 0)  {
             
             strokeWeight(2);
-            line(-10, graphHeight-i*graphHeight/60, 10, graphHeight-i*graphHeight/60);
+            line(-10, graphHeight-i*graphHeight/(detailLevel*5), 10, graphHeight-i*graphHeight/(detailLevel*5));
             
 
             pushStyle();
@@ -175,7 +176,7 @@ void drawThermalAxis(float _width, float _height, float _margin){
             fill(#FFFFFF);
             noStroke();
             textFont(graphFont);
-            text(pixel2Celcius(i*graphHeight/60+1, graphHeight) + "°C", -15, graphHeight-i*graphHeight/60);
+            text(pixel2Celcius(i*graphHeight/(detailLevel*5)+1, graphHeight) + "°C", -15, graphHeight-i*graphHeight/(detailLevel*5)-1);
             popStyle();
         }
     }
@@ -256,21 +257,6 @@ float celcius2Pixel(float _temp, float _pixelHeight){
 void drawRealThermalGraph(float _width, float _height, float _margin){
     if(!bStart){ return;}
     else {
-        // float _xPos = map(millis()-startTimer, 0, 36000, 0, _width-_margin*2);
-        // float _yPos = _height - celcius2Pixel(waterTemp, 800);
-        // // draw x,y line
-        // pushMatrix();
-        // translate(_margin, _margin);
-        // pushStyle();
-        // stroke(#00FF00);
-        // strokeWeight(4);
-
-        // point(_xPos, _yPos);
-        
-
-        // popStyle();
-        // popMatrix();
-
         pushStyle();
         pushMatrix();
         // translate(_margin, 0);
