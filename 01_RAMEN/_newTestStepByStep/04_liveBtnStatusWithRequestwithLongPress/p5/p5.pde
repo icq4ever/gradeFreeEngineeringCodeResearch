@@ -5,12 +5,14 @@
 */
 
 import processing.serial.*;
+import java.text.DecimalFormat;                 // 소수점 표기
 
 float ROOM_TEMP = 20;
 
 Serial feather;
 
 boolean bStart = false;
+boolean bMouseAnalysisOn = false;
 float startTimer = 0;
 float MAX_TEMP=140;
 
@@ -28,6 +30,7 @@ String buttonLabel[] = new String[10];
 ButtonIndicator btnIndicator;
 
 ArrayList <PVector> waterTempLog = new ArrayList<PVector>();
+ArrayList <PVector> noodleTempLog = new ArrayList<PVector>();
 
 void setup(){
     size(1920, 1200);
@@ -82,9 +85,9 @@ void drawScreen1(float _x, float _y){
         pushMatrix();
         translate(80, 260);
 
-        drawThermalAxis(1800, 800, 40);
+        drawThermalAxis(1800, 800);
         // drawIdealThermalGraph(1840, 960, 40);        // THERMAL GRAPH
-        drawRealThermalGraph(1800, 800, 40);
+        drawRealThermalGraph(1800, 800);
         // fill(255, 0, 0);
         // rect(0, 0, 1840, 100);
 
@@ -126,15 +129,12 @@ void drawScreenTitle(String _title, color _c){
     popStyle();
 }
 
-void drawThermalAxis(float _width, float _height, float _margin){
-    // float graphWidth = _width-_margin*2;
-    // float graphHeight = _height-_margin*2;
-
+void drawThermalAxis(float _width, float _height){
+    
     float graphWidth = _width;
     float graphHeight = _height;
 
     pushMatrix();
-    // translate(_margin, _margin);
     pushStyle();
     stroke(#FFFFFF);
     strokeWeight(2);
@@ -182,6 +182,25 @@ void drawThermalAxis(float _width, float _height, float _margin){
     }
     
     popStyle();
+
+
+    // mouse analysis
+    if(bMouseAnalysisOn && mouseY < 1060 && mouseX > 80){
+        pushStyle();
+
+        noFill();
+        stroke(255);
+        line(0, mouseY-260, mouseX-80, mouseY-260);
+        line(mouseX-80, mouseY-260, mouseX-80, 800);
+
+        fill(#FF0000);
+        textSize(18);
+        // noStorke();
+        // textAlign(LEFT, MIDDLE);
+        popStyle();
+
+
+    }
     popMatrix();
 }
 
@@ -212,22 +231,7 @@ void drawTimer(float _x, float _y){
     if(!bStart) {
         text("STANDBY", 0, 0);
     } else {
-        int mil = millis()%1000;
-        int sec = ((int)(millis() - startTimer)/1000) % 60;
-        int min = ((int)(millis() - startTimer)/60000) % 60;
-        
-        String tMil, tSec, tMin;
-
-        if(mil < 10)        {tMil = "00" + Integer.toString(mil);}
-        else if(mil < 100)  {tMil = "0"  + Integer.toString(mil);}
-        else                {tMil = Integer.toString(mil);}
-
-        if(sec < 10)    tSec = "0" + Integer.toString(sec);
-        else            tSec = Integer.toString(sec);
-
-        tMin = Integer.toString(min);
-
-        text(tMin+ ":" + tSec + "." + tMil, 0, 0);
+        text(millisToString(millis() - startTimer), 0, 0);
     }
 
     popMatrix();
@@ -251,16 +255,18 @@ float milliSec2Pixel(float _millis, float _pixelWidth){
 float celcius2Pixel(float _temp, float _pixelHeight){
     return map(_temp, 0, MAX_TEMP, 0, _pixelHeight);
 }
+
 // ======================================================================================
 
 
-void drawRealThermalGraph(float _width, float _height, float _margin){
+void drawRealThermalGraph(float _width, float _height){
     if(!bStart){ return;}
     else {
-        pushStyle();
-        pushMatrix();
-        // translate(_margin, 0);
+        DecimalFormat formatDegree = new DecimalFormat("#.##");
 
+
+        // waterTemp
+        pushStyle();
         stroke(#FFFF00);
         strokeWeight(3);
         if(waterTempLog.size() >1){
@@ -269,25 +275,56 @@ void drawRealThermalGraph(float _width, float _height, float _margin){
                 else        line(milliSec2Pixel(waterTempLog.get(i-1).x, 1800), 800- celcius2Pixel(waterTempLog.get(i-1).y, 800), milliSec2Pixel(waterTempLog.get(i).x, 1800), 800- celcius2Pixel(waterTempLog.get(i).y, 800));
             }
         }
-
         textFont(displayCheckFont);
+        textSize(18);
         fill(#FFFF00);
         noStroke();
         textAlign(LEFT, BOTTOM);
-        text(waterTemp, milliSec2Pixel(millis()-startTimer, 1800), 800 - celcius2Pixel(waterTemp, 800) + 40);
+        text(formatDegree.format(waterTemp) + " °C", milliSec2Pixel(millis()-startTimer, 1800), 800 - celcius2Pixel(waterTemp, 800) - 10);
 
         noFill();
         strokeWeight(1);
         stroke(#E0E0E0);
         if(waterTempLog.size() > 1){
             line( milliSec2Pixel(millis()-startTimer,1800), 800, 
-                  milliSec2Pixel(millis()-startTimer,1800),  800 - celcius2Pixel(waterTempLog.get(waterTempLog.size()-1).y, 800)
+                  milliSec2Pixel(millis()-startTimer,1800), 800 - celcius2Pixel(waterTempLog.get(waterTempLog.size()-1).y, 800)
                 );
             line(0, 800 - celcius2Pixel(waterTempLog.get(waterTempLog.size()-1).y, 800),
                 milliSec2Pixel(millis()-startTimer,1800), 800 - celcius2Pixel(waterTempLog.get(waterTempLog.size()-1).y, 800)
                 );
         }
-        popMatrix();
+        popStyle();
+
+
+
+        // noodleTemp
+        pushStyle();
+        stroke(#00FFFF);
+        strokeWeight(3);
+        if(noodleTempLog.size() >1){
+            for(int i=1; i<noodleTempLog.size(); i++){
+                if(i == 1)  line(0, 800-celcius2Pixel(0, 800), milliSec2Pixel(noodleTempLog.get(i).x, 1800), 800- celcius2Pixel(noodleTempLog.get(i).y, 800));
+                else        line(milliSec2Pixel(noodleTempLog.get(i-1).x, 1800), 800- celcius2Pixel(noodleTempLog.get(i-1).y, 800), milliSec2Pixel(noodleTempLog.get(i).x, 1800), 800- celcius2Pixel(noodleTempLog.get(i).y, 800));
+            }
+        }
+        textFont(displayCheckFont);
+        textSize(18);
+        fill(#00FFFF);
+        noStroke();
+        textAlign(LEFT, BOTTOM);
+        text(formatDegree.format(noodleTemp) + " °C", milliSec2Pixel(millis()-startTimer, 1800), 800 - celcius2Pixel(noodleTemp, 800) + 20);
+
+        noFill();
+        strokeWeight(1);
+        stroke(#E0E0E0);
+        if(noodleTempLog.size() > 1){
+            line( milliSec2Pixel(millis()-startTimer,1800), 800, 
+                  milliSec2Pixel(millis()-startTimer,1800), 800 - celcius2Pixel(noodleTempLog.get(noodleTempLog.size()-1).y, 800)
+                );
+            line(0, 800 - celcius2Pixel(noodleTempLog.get(noodleTempLog.size()-1).y, 800),
+                milliSec2Pixel(millis()-startTimer,1800), 800 - celcius2Pixel(noodleTempLog.get(noodleTempLog.size()-1).y, 800)
+                );
+        }
         popStyle();
 
     }
@@ -323,6 +360,7 @@ void serialEvent(Serial port){
             PVector _waterTemp = new PVector(millis() - startTimer, waterTemp);
             PVector _noodleTemp = new PVector(millis() - startTimer, noodleTemp);
             waterTempLog.add(_waterTemp);
+            noodleTempLog.add(_noodleTemp);
             // noodleTempLog.add(_noodleTemp);
         } 
     }
@@ -341,4 +379,27 @@ void keyReleased(){
             //noodleTempLog.clear();
         }
     }
+}
+
+void mousePressed(){
+    bMouseAnalysisOn = !bMouseAnalysisOn;
+}
+
+String millisToString(float _millis){
+    int mil = (int)_millis%1000;
+    int sec = ((int)(_millis)/1000) % 60;
+    int min = ((int)(_millis)/60000) % 60;
+    
+    String tMil, tSec, tMin;
+
+    if(mil < 10)        {tMil = "00" + Integer.toString(mil);}
+    else if(mil < 100)  {tMil = "0"  + Integer.toString(mil);}
+    else                {tMil = Integer.toString(mil);}
+
+    if(sec < 10)    tSec = "0" + Integer.toString(sec);
+    else            tSec = Integer.toString(sec);
+
+    tMin = Integer.toString(min);
+
+    return (tMin+ ":" + tSec + "." + tMil);
 }
