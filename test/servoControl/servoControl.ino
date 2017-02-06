@@ -1,4 +1,7 @@
+#include <SPI.h>
+#include <RH_RF95.h>
 #include <Servo.h>
+#include <Adafruit_MAX31856.h>
 
 int motor_pin = 9;
 int iDirection = -1;
@@ -15,17 +18,8 @@ void setup() {
 	Serial.begin(9600);
 }
 void loop() {
-	servoR();
-	delay(2000);
-
+	
 	servoStop();
-	delay(2000);
-
-	servoL();
-	delay(2000);
-
-	servoStop();
-	delay(2000);
 }
 
 void servoR(){
@@ -34,7 +28,7 @@ void servoR(){
 }
 
 void servoL(){
-	myServo.writeMicroseconds(1580);
+	myServo.writeMicroseconds(1000);
 	Serial.println("L!");
 }
 
