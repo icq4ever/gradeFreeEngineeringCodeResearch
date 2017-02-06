@@ -224,8 +224,8 @@ void receiveMessage(){
 
 		if(rf95.recv((char *)recvBuffer, &recvBufferLen)){
 			// recv ok
-			if(recvBuffer[0] == '/'){
-				if(recvBuffer[1] == 'R'){
+			if((recvBuffer[12] == '/') && (recvBuffer[13] == 'R')){
+				if(recvBuffer[14] == '1'){
 					digitalWrite(PIN_LED, HIGH);
 					getTempData();
 
@@ -244,21 +244,23 @@ void receiveMessage(){
 					rf95.send(reply, sizeof(reply));
 					digitalWrite(PIN_LED, LOW);
 					// Serial.println("Temp Data Sent!");
-					// printTempData();
+					printTempData();
+				} else {
+					digitalWrite(PIN_LED, LOW);
+				}
+			}
+
+			if(recvBuffer[0] == '/' && recvBuffer[1] == 'B'){
+				// digitalWrite(PIN_LED, HIGH);
+
+				// parse message 
+				for(int i=0; i<sizeof(btnStatus); i++){
+					if(recvBuffer[i+2] == '1')	btnStatus[i] = true;
+					else						btnStatus[i] = false;
 				}
 
-				if(recvBuffer[1] == 'B'){
-					digitalWrite(PIN_LED, HIGH);
-
-					// parse message 
-					for(int i=0; i<sizeof(btnStatus); i++){
-						if(recvBuffer[i+2] == '1')	btnStatus[i] = true;
-						else						btnStatus[i] = false;
-					}
-
-					// printBtnStatus();
-					// printRecvBuffer();
-				}
+				// printBtnStatus();
+				// printRecvBuffer();
 			}
 		} else {
 			// recv failed

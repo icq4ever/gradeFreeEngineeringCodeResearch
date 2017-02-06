@@ -34,6 +34,7 @@ int  inputPinList[NUM_OF_INPUT];
 // == Thermalcoupler buffer, data setup ==========
 const int RECV_BUFFER_MAX_SIZE = 20;
 uint8_t recvBuffer[RECV_BUFFER_MAX_SIZE];
+bool requestOn = false;
 
 typedef union{
     float tempFloat;
@@ -137,7 +138,9 @@ void loop(){
     countTick++;
     
     if(countTick > 20){
-       requestTempToActionModule();
+       // requestTempToActionModule();
+        requestOn = true;
+        requestTempToActionModule();
         // sendBtnStatus();
         countTick = 0;
         // delay(100);
@@ -147,6 +150,8 @@ void loop(){
         updateTrueBtnStatus();
         sendBtnStatus();
         sendToP5();
+
+        requestOn = false;
        // delay(100);
     }
 
@@ -188,7 +193,7 @@ void initLoRa() { // init
 
 void sendBtnStatus(){
 //    Serial.println("btn sent!");
-    char sendBtnPacket[sizeof(inputBtnStatus) + 3];
+    char sendBtnPacket[sizeof(inputBtnStatus) + 6];
 
     sendBtnPacket[0] = '/';
     sendBtnPacket[1] = 'B';
@@ -196,18 +201,30 @@ void sendBtnStatus(){
         if(trueBtnStatus[i])    sendBtnPacket[i+2] = '1';
         else                    sendBtnPacket[i+2] = '0';
     }
+
+    sendBtnPacket[12] = '/';
+    sendBtnPacket[13] = 'R';
+
+    if(requestOn){   
+        sendBtnPacket[14] = '1';
+    } else {
+        sendBtnPacket[14] = '0';
+    }
+
     sendBtnPacket[sizeof(sendBtnPacket) -1] = 0;
+    if(requestOn){
+        requestTempToActionModule();
+    }
 
     rf95.send((uint8_t *) sendBtnPacket, sizeof(sendBtnPacket));
 //    rf95.waitPacketSent();
 }
 
 void requestTempToActionModule(){
-    char requestPacket[3] = "/R";
-    requestPacket[2] = 0;
+    // char requestPacket[3] = "/R";
+    // requestPacket[2] = 0;
 
     digitalWrite(PIN_LED, HIGH);
-    rf95.send((uint8_t *) requestPacket, 3);
 
     rf95.waitPacketSent();
     digitalWrite(PIN_LED, LOW);
@@ -237,7 +254,7 @@ void receiveTempFromActionModule(){
 
     } 
     else {
-        // Serial.println("Action Module Not reply.........");
+        Serial.println("Action Module Not reply.........");
     }
 }
 
