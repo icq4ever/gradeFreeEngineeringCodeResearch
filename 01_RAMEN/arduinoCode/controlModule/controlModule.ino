@@ -1,177 +1,163 @@
-/* 
- *  RAMEN REMOTE CONTROL MODULE FIRMWARE
- *  by GradeFreeEngineering Team
- *  
- *  Song Hojun 
- *  Yi Donghoon
- * 
- * 
- *  TODO 
- *
- *  [ ] : COMMUNICATION TEST WITH PAIR OF feather LoRa 
- * 
- */
-
-
-#include <SPI.h>
 #include <RH_RF95.h>
-#include <TimerOne.h>
+#include <SPI.h>
+#include <Wire.h>
+#include "Adafruit_MCP23017.h"
 
-// ==============================================================
 // GFE STANDARD CONTROL PIN LIST
 const int PIN_SOLENOID_1_BTN    = A2;       // 1, MSG
 const int PIN_SOLENOID_2_BTN    = A3;       // 2, MSG
 const int PIN_SOLENOID_3_BTN    = A4;       // 3, MSG
-const int PIN_EGG_BREAKER_BTN   = A5;       // 4, MSG   
-const int PIN_START_BTN         = SCK;      // 5, P5    
-const int PIN_HOT_WATER_BTN     = MOSI;     // 6, MSG   
-const int PIN_DROP_MBALL_BTN    = MISO;     // 7, MSG   
-const int PIN_HEATING_MBALL_BTN = 4;        // 8, MSG   
-const int PIN_SERVO_UP_BTN      = 5;        // 9
-const int PIN_SERVO_DOWN_BTN    = 9;        // 10
+const int PIN_DROP_MBALL_BTN    = A5;       // 4, MSG   
+const int PIN_HEATING_MBALL_BTN = 5;        // 8, MSG   
+const int PIN_SERVO_UP_BTN      = 9;        // 9
+const int PIN_SERVO_DOWN_BTN    = 6;        // 10
 
-const int PIN_LED               = 13;       // PIN_LED  
+// I2C PORT EXPANDER
+// 0  : PIN_START_BTN
+// 1  : PIN_EGG_BREAKER_BTN
+// 15 : PIN_HOT_WATER
+Adafruit_MCP23017 mcp;
 
-// ==============================================================
-// LoRa SETTING
-const int RFM95_CS          = 8;
-const int RFM95_RST         = 4;
-const int RFM95_INT         = 7;
 
-// LoRa FREQ SETTING
-const float RF95_FREQ           = 433.0;
+const int PIN_LED         = 13;
 
-// ==============================================================
+const int RFM95_CS      = 8;
+const int RFM95_RST     = 4;
+const int RFM95_INT     = 7;
 
-// number of button message bit
-const int NUM_OF_INPUT      = 10;
-    
-const int IN_MESSAGE_SIZE   = 8;
-const int RECV_BUFFER_SIZE  = IN_MESSAGE_SIZE+2;
+const float RF95_FREQ   = 433.0;
 
-const int OUT_MESSAGE_SIZE  = 9;
-const int SEND_BUFFER_SIZE  = OUT_MESSAGE_SIZE+3;
+const int NUM_OF_INPUT = 10;
 
-// singleton instance of the radio driver
-RH_RF95 rf95(RFM95_CS, RFM95_INT);
+int  inputPinList[NUM_OF_INPUT];
 
-// timer flags
-bool    bSendToAction, bRequestToAction, bSendToP5;
-
-int     inputPinList[NUM_OF_INPUT];
-int     inputBtnStatus[OUT_MESSAGE_SIZE];
-
-char    sendBuffer[SEND_BUFFER_SIZE];
-uint8_t recvBuffer[RECV_BUFFER_SIZE];
+// == Thermalcoupler buffer, data setup ==========
+const int RECV_BUFFER_MAX_SIZE = 20;
+uint8_t recvBuffer[RECV_BUFFER_MAX_SIZE];
 
 typedef union{
-    float floatPoint;
-    byte bin[4];
-} temp;
+    float tempFloat;
+    byte tempBin[4];    // union : float / 4 binary
+} temperature;
 
-temp waterTemp, noodleTemp;
-volatile unsigned long tickCount = 0;
-volatile tcSendToAction, tcRequestToAction, tcSendToP5;
+temperature waterTemp, noodleTemp;
+// ===============================================
 
-void tickCountUp(){
-    tickCount = tickCount + 1;
-    tcSendToAction++;
-    tcRequestToAction++;
-    tcSendToAction++;
-}
+enum btnPressTime{
+    moment,
+    sPress,
+    lPress
+};
 
-void setup() {
-    pinMode(RFM95_RST, OUTPUT);
-    digitalWrite(RFM95_RST, HIGH);
+// btn dummy array
+bool inputBtnStatus[NUM_OF_INPUT];
+bool lastBtnStatus[NUM_OF_INPUT];
+bool trueBtnStatus[NUM_OF_INPUT];
+
+float lastBtnPressedTimer[NUM_OF_INPUT];
+btnPressTime buttonPressTime[NUM_OF_INPUT];
+
+
+RH_RF95 rf95(RFM95_CS, RFM95_INT);
+unsigned long countTick;
+
+
+void setup(){
+    Serial.begin(115200);
+    pinMode(PIN_LED, OUTPUT);
+    mcp.begin();
+
+    // init mcp input
+    mcp.pinMode(0, INPUT);
+    mcp.pullUp(0, HIGH);
+
+    mcp.pinMode(1, INPUT);
+    mcp.pullUp(1, HIGH);
+
+    mcp.pinMode(15, INPUT);
+    mcp.pullUp(15, HIGH);
+
 
     delay(1000);
-
-    // init timer flags
-    bSendToAction = bRequestToAction = bSendToP5 = false;
-    tcSendToAction = tcRequestToAction = tcSendToAction = 0;
-
-    // Timer1.initialize(10000);        // 10ms
-    Timer1.initialize(10000);
-    Timer1.attachInterrupt(tickCountUp);
     
-    // start Serial vis USB
-    Serial.begin(115200);
+    countTick = 0;
 
+
+    /*
+    PIN_SOLENOID_1_BTN      : moment
+    PIN_SOLENOID_2_BTN      : moment
+    PIN_SOLENOID_3_BTN      : moment
+    PIN_DROP_MBALL_BTN      : long press
+    PIN_HEATING_MBALL_BTN   : long press
+    PIN_SERVO_UP_BTN        : moment
+    PIN_SERVO_DOWN_BTN      : moment
+    PIN_START_BTN           : long press
+    PIN_EGG_BREAKER_BTN     : long press
+    PIN_HOT_WATER           : long press
+    */
+
+    // intput GPIO
     inputPinList[0] = PIN_SOLENOID_1_BTN;
     inputPinList[1] = PIN_SOLENOID_2_BTN;
     inputPinList[2] = PIN_SOLENOID_3_BTN;
-    inputPinList[3] = PIN_EGG_BREAKER_BTN;
-    inputPinList[4] = PIN_HOT_WATER_BTN;
-    inputPinList[5] = PIN_HEATING_MBALL_BTN;
-    inputPinList[6] = PIN_DROP_MBALL_BTN;
-    inputPinList[7] = PIN_SERVO_UP_BTN;
-    inputPinList[8] = PIN_SERVO_DOWN_BTN;
-    
-    inputPinList[9] = PIN_START_BTN;
+    inputPinList[3] = PIN_DROP_MBALL_BTN;
+    inputPinList[4] = PIN_HEATING_MBALL_BTN;
+    inputPinList[5] = PIN_SERVO_UP_BTN;
+    inputPinList[6] = PIN_SERVO_DOWN_BTN;
 
     // input Pin setup
-    for(int i=0; i<NUM_OF_INPUT; i++){
+    for(int i=0; i<NUM_OF_INPUT-3; i++){
         pinMode(inputPinList[i], INPUT_PULLUP);    
-        if(i != NUM_OF_INPUT-1)     inputBtnStatus[i] = 0;
     }
 
-    // output pin setup
-    pinMode(PIN_LED, OUTPUT);
-
-    for(int i=0; i<SEND_BUFFER_SIZE; i++){
-        sendBuffer[i] = 'N';
+    for(int i=0; i<NUM_OF_INPUT; i++){
+        inputBtnStatus[i]       = false;
+        lastBtnStatus[i]        = false;
+        trueBtnStatus[i]        = false;
+        lastBtnPressedTimer[i]  = 0;
     }
 
-    for(int i=0; i<RECV_BUFFER_SIZE; i++){
-        recvBuffer[i] = 'N';
-    }
+    buttonPressTime[0] = moment;
+    buttonPressTime[1] = moment;
+    buttonPressTime[2] = moment;
+    buttonPressTime[3] = sPress;
+    buttonPressTime[4] = sPress;
+    buttonPressTime[5] = moment;
+    buttonPressTime[6] = moment;
+    buttonPressTime[7] = sPress;
+    buttonPressTime[8] = sPress;
+    buttonPressTime[9] = sPress;
+
 
     initLoRa();
 }
 
-void loop() {
-    unsigned long tickCountCopy;
-
-    noInterrupts();
-    tickCountCopy = tickCount;
-    interrupts();
-
-    if(tickCountCopy>2) {  // 20ms
-        bSendToAction = true;
-        // Serial.print("action ");
+void loop(){
+    // delay(1000);
+    countTick++;
+    
+    if(countTick > 20){
+       requestTempToActionModule();
+        // sendBtnStatus();
+        countTick = 0;
+        // delay(100);
     } 
-
-    if(tickCountCopy>10){  // 100ms
-        bRequestToAction = true;
-        // Serial.print("request ");
+    else {
+        updateBtnStatusBuffer();
+        updateTrueBtnStatus();
+        sendBtnStatus();
+        sendToP5();
+       // delay(100);
     }
 
-    if(tickCountCopy>5){
-        bSendToP5 = true;
-        // Serial.print("P5 ");
-    }
-
-//    Serial.println();
-
-    updateBtnStatus();
-    updateSendBuffer();
-    sendToActionModule(bSendToAction);
-    requestToActionModule(bRequestToAction);
-
-    // sendToP5(bSendToP5);
-
-    // delay(100);
-    getTempFromActionModule();
-    // printBtnStatus();
-
-    printTemp();
+//    Serial.println(countTick);
 }
 
-void initLoRa(){
+void initLoRa() { // init
     pinMode(RFM95_RST, OUTPUT);
-    digitalWrite(RFM_RST, HIGH);
-    
-    Serial.println("Feather LoRa TX Test!");
+    digitalWrite(RFM95_RST, HIGH);
+
+    Serial.println("Feather LoRa RX Test!");
 
     // manual LoRa reset
     digitalWrite(RFM95_RST, LOW);
@@ -200,112 +186,132 @@ void initLoRa(){
     rf95.setTxPower(23, false);
 }
 
-void updateBtnStatus(){
-    for(int i=0; i<OUT_MESSAGE_SIZE; i++){
-        if(digitalRead(inputPinList[i]) ==0)    inputBtnStatus[i] = true;   // 
-        else                                    inputBtnStatus[i] = false;
+void sendBtnStatus(){
+//    Serial.println("btn sent!");
+    char sendBtnPacket[sizeof(inputBtnStatus) + 3];
+
+    sendBtnPacket[0] = '/';
+    sendBtnPacket[1] = 'B';
+    for(int i=0; i<sizeof(trueBtnStatus); i++){
+        if(trueBtnStatus[i])    sendBtnPacket[i+2] = '1';
+        else                    sendBtnPacket[i+2] = '0';
     }
+    sendBtnPacket[sizeof(sendBtnPacket) -1] = 0;
+
+    rf95.send((uint8_t *) sendBtnPacket, sizeof(sendBtnPacket));
+//    rf95.waitPacketSent();
 }
 
-void printBtnStatus(){  // message
-    for(int i=0; i<SEND_BUFFER_SIZE; i++){
-        Serial.print((char)sendBuffer[i]);
-        Serial.print(", ");
-    }   
-    Serial.println();
-}
+void requestTempToActionModule(){
+    char requestPacket[3] = "/R";
+    requestPacket[2] = 0;
 
-void updateSendBuffer(){
-    /*
-        sendBuffer[] = { /, B, 1, 0, 1, 0, 1, 1, 1, 1...} 
-    */
-    
-    sendBuffer[0] = '/';
-    sendBuffer[1] = 'B';
-    for(int i=0; i<OUT_MESSAGE_SIZE; i++){
-        if(inputBtnStatus[i])   sendBuffer[i+2] = '1';
-        else                    sendBuffer[i+2] = '0';
-    }
-    sendBuffer[SEND_BUFFER_SIZE-1] = 0;
-}
+    digitalWrite(PIN_LED, HIGH);
+    rf95.send((uint8_t *) requestPacket, 3);
 
-
-
-void sendToActionModule(bool _bSendToAction){
-    if(_bSendToAction){
-        // updateSendBuffer();
-        digitalWrite(PIN_LED, HIGH);
+    rf95.waitPacketSent();
+    digitalWrite(PIN_LED, LOW);
+    receiveTempFromActionModule();
         
-        rf95.send((uint8_t *)sendBuffer, SEND_BUFFER_SIZE);
-        rf95.waitPacketSent();
-        digitalWrite(PIN_LED, LOW);
-
-        bSendToAction = false;
-    }
+    // Serial.println("req sent!");
 }
 
-void requestToActionModule(bool _bRequestToAction){
-    if(_bRequestToAction){
-        char requestPacket[3] = "/T";
-        requestPacket[2] = 0;
-
-        rf95.send((uint8_t *)requestPacket, 3);
-
-        rf95.waitPacketSent();
-        //wait for a reply
-        receiveFromActionModule();
-
-        bRequestToAction = false;
-    }
-}
-
-void receiveFromActionModule(){
-    // TODO : receive message from actionodule
-    // waterTemp, noodleTemp, pps update signal
+void receiveTempFromActionModule(){
     if(rf95.waitAvailableTimeout(500)){
         uint8_t recvBufferLen = sizeof(recvBuffer);
 
-        if(rf95.recv((char *)recvBuffer, &recvBufferLen)){
-            // rf95.waitPacketSent();   // ??
-            Serial.println("Received OK!");
-        } else {
-            // receive fail routine. kill switch?
-            Serial.println("Receive failed");
+        if(rf95.recv((char *)recvBuffer, &recvBufferLen))   {   /*Serial.println("Received OK!"); */    }
+        else                                                {   /*Serial.println("Receive Failed"); */  }
+
+        if(recvBuffer[0] == '/'){
+            waterTemp.tempBin[0] = recvBuffer[1];
+            waterTemp.tempBin[1] = recvBuffer[2];
+            waterTemp.tempBin[2] = recvBuffer[3];
+            waterTemp.tempBin[3] = recvBuffer[4];
+
+            noodleTemp.tempBin[0] = recvBuffer[5];
+            noodleTemp.tempBin[1] = recvBuffer[6];
+            noodleTemp.tempBin[2] = recvBuffer[7];
+            noodleTemp.tempBin[3] = recvBuffer[8];
         }
-    } else {
-        Serial.println("No reply..");
+
+    } 
+    else {
+        // Serial.println("Action Module Not reply.........");
     }
 }
 
-void getTempFromActionModule(){
-    if(recvBuffer[0] == '/'){
-        waterTemp.bin[0] = recvBuffer[1];
-        waterTemp.bin[1] = recvBuffer[2];
-        waterTemp.bin[2] = recvBuffer[3];
-        waterTemp.bin[3] = recvBuffer[4];
-        noodleTemp.bin[0] = recvBuffer[5];
-        noodleTemp.bin[1] = recvBuffer[6];
-        noodleTemp.bin[2] = recvBuffer[7];
-        noodleTemp.bin[3] = recvBuffer[8];
-    }
-}
-
-void printTemp(){
-    Serial.print(waterTemp.floatPoint, 4);
-    Serial.print(" : ");
-    Serial.print(noodleTemp.floatPoint, 4);
+void printTempData(){
+    Serial.print(waterTemp.tempFloat, 4);
+    Serial.print(", ");
+    Serial.print(noodleTemp.tempFloat, 4);
     Serial.println();
 }
 
-void sendToP5(bool _bSendToP5){
-    // TODO : send to Processing
-    // start?
-    // waterTemp, noodleTemp
-    // pps update message
-    if( _bSendToP5){
-        if(digitalRead(PIN_START_BTN)){
-            Serial.println("S");
-        }
-        bSendToP5 = false;
+void updateBtnStatusBuffer(){
+    for(int i=0; i<7; i++){
+        if(digitalRead(inputPinList[i]) == LOW)   inputBtnStatus[i] = true;
+        else                                      inputBtnStatus[i] = false;
     }
+
+    // 0  : PIN_START_BTN
+    // 1  : PIN_EGG_BREAKER_BTN
+    // 15 : PIN_HOT_WATER
+    if(mcp.digitalRead(0))  inputBtnStatus[7] = false;
+    else                    inputBtnStatus[7] = true;
+
+    if(mcp.digitalRead(1))  inputBtnStatus[8] = false;
+    else                    inputBtnStatus[8] = true;
+
+    if(mcp.digitalRead(15)) inputBtnStatus[9] = false;
+    else                    inputBtnStatus[9] = true;
+    
+}
+
+void updateTrueBtnStatus(){
+    for(int i=0; i<NUM_OF_INPUT; i++){
+        if(inputBtnStatus[i]){
+            if(!lastBtnStatus[i]){
+                lastBtnPressedTimer[i] = millis();
+                lastBtnStatus[i] = true;
+            } else {
+                if(buttonPressTime[i] == moment){
+                    trueBtnStatus[i] = lastBtnStatus[i];
+                } else if(millis() - lastBtnPressedTimer[i] > 300){
+                    trueBtnStatus[i] = true;
+                } else {
+                    trueBtnStatus[i] = false;
+                }
+            }
+        } else {
+            lastBtnStatus[i] = false;
+            trueBtnStatus[i] = false;
+        } 
+    }
+}
+
+void sendToP5(){
+    
+    // if(trueBtnStatus[7])    Serial.print("S1");
+    // else                    Serial.print("S0");
+
+    // if(trueBtnStatus[7])    Serial.print("1");
+    // else                    Serial.print("0");
+    
+    for(int i=0; i<NUM_OF_INPUT; i++){
+        if(trueBtnStatus[i])    Serial.print("1");
+        else                    Serial.print("0");
+        Serial.print(",");
+    }
+
+    // Serial.print(",");
+
+    // Serial.print("W");
+    Serial.print(waterTemp.tempFloat, 4);
+    Serial.print(",");
+    
+    // Serial.print("N");
+    Serial.print(noodleTemp.tempFloat, 4);
+
+    Serial.println();
 }
