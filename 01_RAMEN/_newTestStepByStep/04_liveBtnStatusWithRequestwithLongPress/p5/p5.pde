@@ -376,6 +376,7 @@ void keyReleased(){
         if(bStart)  {
             bStart = false;
             waterTempLog.clear();
+            noodleTempLog.clear();
             //noodleTempLog.clear();
         }
     }
