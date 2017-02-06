@@ -19,6 +19,7 @@ const int REPLY_MESSAGE_SIZE = 4;
 
 const int RECV_MAX_BUFFER_SIZE = 20;
 uint8_t recvBuffer[RECV_MAX_BUFFER_SIZE];
+bool lastServoStop;
 // ===============================================
 
 /*
@@ -46,7 +47,7 @@ const int PIN_SOLENOID_3 		= A2;
 const int PIN_DROP_MBALL		= 5;
 const int PIN_HEATING_MBALL		= 6;
 const int PIN_EGG_BREAKER 		= A3; 
-const int PIN_HOT_WATER			= 3;	// SCL
+const int PIN_HOT_WATER			= A5;	// SCL
 
 const int PIN_SERVO_PWM			= 9;
 const int PIN_SIREN				= A4;
@@ -81,6 +82,40 @@ int outputBypassPinList[NUM_OF_BYPASSOUT];
 const int BUZZER_MICROHERZ		= 250;
 const int BUZZER_DUTYCYCLE		= 0.5;
 Servo servo;
+
+enum btnTypes{
+	BTN_MOMENT,
+	BTN_SHORT_PRESS,
+	BTN_LONG_PRESS
+};
+
+/*
+
+btnStatus[0] : SOLENOID_1
+btnStatus[1] : SOLENOID_2
+btnStatus[2] : SOLENOID_3
+btnStatus[3] : DROP_MBALL
+btnStatus[4] : HEATING_MBALL
+btnStatus[5] : SERVO_UP
+btnStatus[6] : SERVO_DOWN
+btnStatus[7] : START_BTN
+btnStatus[8] : EGG_BREAKER
+btnStatus[9] : HOT_WATER
+
+*/
+
+btnTypes btnTypeTable[10]={
+	BTN_MOMENT,
+	BTN_MOMENT,
+	BTN_MOMENT,
+	BTN_SHORT_PRESS,
+	BTN_SHORT_PRESS,
+	BTN_MOMENT,
+	BTN_MOMENT,
+	BTN_LONG_PRESS,
+	BTN_SHORT_PRESS,
+	BTN_SHORT_PRESS
+};
 
 void setup() {
 	Serial.begin(115200);
@@ -132,6 +167,7 @@ void loop() {
 	// printTempData();
 	receiveMessage();
 	action();
+	printRecvBuffer();
 }
 
 void initLoRa() { // init
@@ -207,8 +243,8 @@ void receiveMessage(){
 
 					rf95.send(reply, sizeof(reply));
 					digitalWrite(PIN_LED, LOW);
-					Serial.println("Temp Data Sent!");
-					printTempData();
+					// Serial.println("Temp Data Sent!");
+					// printTempData();
 				}
 
 				if(recvBuffer[1] == 'B'){
@@ -232,13 +268,18 @@ void receiveMessage(){
 
 void action(){
 	/*
-	outputBypassPinList[0] = PIN_SOLENOID_1;
-	outputBypassPinList[1] = PIN_SOLENOID_2;
-	outputBypassPinList[2] = PIN_SOLENOID_3;
-	outputBypassPinList[3] = PIN_DROP_MBALL;
-	outputBypassPinList[4] = PIN_HEATING_MBALL;
-	outputBypassPinList[5] = PIN_EGG_BREAKER;
-	outputBypassPinList[6] = PIN_HOT_WATER;
+
+	btnStatus[0] : SOLENOID_1
+	btnStatus[1] : SOLENOID_2
+	btnStatus[2] : SOLENOID_3
+	btnStatus[3] : DROP_MBALL
+	btnStatus[4] : HEATING_MBALL
+	btnStatus[5] : SERVO_UP
+	btnStatus[6] : SERVO_DOWN
+	btnStatus[7] : START_BTN
+	btnStatus[8] : EGG_BREAKER
+	btnStatus[9] : HOT_WATER
+
 	*/
 	if(btnStatus[0])	{
 		digitalWrite(PIN_SOLENOID_1, HIGH);
@@ -285,6 +326,8 @@ void action(){
 	if(btnStatus[7]){
 		Serial.println("START BTN !!!");
 	}
+
+	// servo control (pin 5, 6)
 	noodleUpDown(generateServoDirectionFlag());
 
 }
@@ -302,13 +345,18 @@ int generateServoDirectionFlag(){
 void noodleUpDown(int _rotateCtrl){
 	if(_rotateCtrl < 2)	{		
 		servo.writeMicroseconds(2000);	// 1 : right 
-		Serial.println("Servo Up!");
+		lastServoStop = false;
+		// Serial.println("Servo Up!");
 	} else if(_rotateCtrl > 2)	{
 		servo.writeMicroseconds(1000);	// 3 : left
-		Serial.println("Servo Down!");
+		lastServoStop = false;
+		// Serial.println("Servo Down!");
 	} else	{
-		servo.writeMicroseconds(1500);	// 2 : stop
-		// Serial.println("Servo Stop!");
+		if(!lastServoStop){
+			servo.writeMicroseconds(1500);	// 2 : stop
+			lastServoStop = true;
+			// Serial.println("Servo Stop!");
+		}
 	}	
 }
 
