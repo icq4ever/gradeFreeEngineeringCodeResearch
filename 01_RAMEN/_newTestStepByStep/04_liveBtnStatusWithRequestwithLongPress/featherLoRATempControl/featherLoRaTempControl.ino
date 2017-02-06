@@ -12,7 +12,6 @@ const int PIN_HEATING_MBALL_BTN = 5;        // 8, MSG
 const int PIN_SERVO_UP_BTN      = 9;        // 9
 const int PIN_SERVO_DOWN_BTN    = 6;        // 10
 
-
 // I2C PORT EXPANDER
 // 0  : PIN_START_BTN
 // 1  : PIN_EGG_BREAKER_BTN
