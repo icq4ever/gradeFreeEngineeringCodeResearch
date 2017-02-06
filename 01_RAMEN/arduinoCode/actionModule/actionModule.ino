@@ -132,11 +132,13 @@ void setup() {
 		pinMode(outputBypassPinList[i], OUTPUT);
 	}
 
-	pinMode(PIN_SERVO_PWM, OUTPUT);
+	// pinMode(PIN_SERVO_PWM, OUTPUT);
 	pinMode(PIN_SIREN, OUTPUT);
 	pinMode(PIN_BUZZER_PWM, OUTPUT);
 	pinMode(PIN_LED, OUTPUT);
 
+	servo.attach(PIN_SERVO_PWM);
+	servo.writeMicroseconds(1500);
 
 
 	// init MAX31856 
@@ -156,7 +158,7 @@ void setup() {
 		btnStatus[i] = false;
 	}
 
-	servo.attach(PIN_SERVO_PWM);
+	
 
 	initLoRa();
 
