@@ -19,7 +19,7 @@ const int REPLY_MESSAGE_SIZE = 4;
 
 const int RECV_MAX_BUFFER_SIZE = 20;
 uint8_t recvBuffer[RECV_MAX_BUFFER_SIZE];
-bool lastServoStop;
+bool lastServoStop, lastServoUp, lastServoDown;
 // ===============================================
 
 /*
@@ -51,7 +51,7 @@ const int PIN_HOT_WATER			= A5;	// SCL
 
 const int PIN_SERVO_PWM			= 9;
 const int PIN_SIREN				= A4;
-const int PIN_BUZZER_PWM		= 11;
+const int PIN_BUZZER_PWM		= 11 ;	
 const int PIN_LED 				= 13;
 
 // thremal SPI pin
@@ -132,12 +132,14 @@ void setup() {
 		pinMode(outputBypassPinList[i], OUTPUT);
 	}
 
-	// pinMode(PIN_SERVO_PWM, OUTPUT);
+	pinMode(PIN_SERVO_PWM, OUTPUT);
 	pinMode(PIN_SIREN, OUTPUT);
-	pinMode(PIN_BUZZER_PWM, OUTPUT);
+	// pinMode(PIN_BUZZER_PWM, OUTPUT);
 	pinMode(PIN_LED, OUTPUT);
+	digitalWrite(PIN_LED, LOW);
 
-	servo.attach(PIN_SERVO_PWM);
+	lastServoUp = lastServoDown = lastServoUp = false;
+	servo.attach(PIN_SERVO_PWM, 1000, 2000);
 	servo.writeMicroseconds(1500);
 
 
@@ -158,8 +160,6 @@ void setup() {
 		btnStatus[i] = false;
 	}
 
-	
-
 	initLoRa();
 
 }
@@ -168,8 +168,8 @@ void loop() {
 	// getTempData();
 	// printTempData();
 	receiveMessage();
-	action();
-	printRecvBuffer();
+	action();	
+	// printRecvBuffer();
 }
 
 void initLoRa() { // init
@@ -224,11 +224,12 @@ void receiveMessage(){
 	if(rf95.available()){
 		uint8_t recvBufferLen = sizeof(recvBuffer);
 
-		if(rf95.recv((char *)recvBuffer, &recvBufferLen)){
+		if(rf95.recv(recvBuffer, &recvBufferLen)){
+			digitalWrite(PIN_LED, HIGH);
 			// recv ok
 			if(recvBuffer[0] == '/'){
 				if(recvBuffer[1] == 'R'){
-					digitalWrite(PIN_LED, HIGH);
+					// digitalWrite(PIN_LED, HIGH);
 					getTempData();
 
 					uint8_t reply[10];
@@ -244,13 +245,13 @@ void receiveMessage(){
 					reply[9] = 0;
 
 					rf95.send(reply, sizeof(reply));
-					digitalWrite(PIN_LED, LOW);
+					// digitalWrite(PIN_LED, LOW);
 					// Serial.println("Temp Data Sent!");
 					// printTempData();
 				}
 
 				if(recvBuffer[1] == 'B'){
-					digitalWrite(PIN_LED, HIGH);
+					// digitalWrite(PIN_LED, HIGH);
 
 					// parse message 
 					for(int i=0; i<sizeof(btnStatus); i++){
@@ -262,6 +263,7 @@ void receiveMessage(){
 					// printRecvBuffer();
 				}
 			}
+			digitalWrite(PIN_LED, LOW);
 		} else {
 			// recv failed
 		}
@@ -336,27 +338,40 @@ void action(){
 
 int generateServoDirectionFlag(){
 	// UP/DOWN all pressed or nothing pressed
-	if( (btnStatus[5] && btnStatus[6]) || (!btnStatus[5] && !btnStatus[6]) ){
+	if( btnStatus[5] == false && btnStatus[6] == false ){
 		return 2;	// STOP
-	} else {
-		if(btnStatus[5])		return 1;	// up pressed : RIGHT
-		else 					return 3;	// down pressed : LEFT
-	}
+	} 
+
+	if(btnStatus[5] == true && btnStatus[6] == false)		return 1;	// up pressed : RIGHT
+	if(btnStatus[6] == true && btnStatus[5] == false)	 	return 3;	// down pressed : LEFT
 }
 
 void noodleUpDown(int _rotateCtrl){
-	if(_rotateCtrl < 2)	{		
-		servo.writeMicroseconds(2000);	// 1 : right 
-		lastServoStop = false;
-		// Serial.println("Servo Up!");
+
+	if(_rotateCtrl < 2)	{
+		if(!lastServoUp){
+			Serial.println("Up");
+			servo.writeMicroseconds(2000);	// 1 : right 
+			lastServoStop = false;
+			lastServoUp = true;
+			lastServoDown = false;
+		}
 	} else if(_rotateCtrl > 2)	{
-		servo.writeMicroseconds(1000);	// 3 : left
-		lastServoStop = false;
-		// Serial.println("Servo Down!");
+		if(!lastServoDown){
+			Serial.println("Down");
+			servo.writeMicroseconds(1000);	// 3 : left
+			lastServoStop = false;
+			lastServoUp = false;
+			lastServoDown = true;
+			// Serial.println("Servo Down!");
+		}
 	} else	{
 		if(!lastServoStop){
+			Serial.println("stop");
 			servo.writeMicroseconds(1500);	// 2 : stop
 			lastServoStop = true;
+			lastServoUp = false;
+			lastServoDown = false;
 			// Serial.println("Servo Stop!");
 		}
 	}	
@@ -378,3 +393,4 @@ void printRecvBuffer(){
 	}
 	Serial.println();
 }
+
