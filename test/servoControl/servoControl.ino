@@ -1,38 +1,54 @@
-#include <SPI.h>
-#include <RH_RF95.h>
+/*
+Controlling a servo position using a potentiometer (variable resistor)
+by Michal Rinott <http://people.interaction-ivrea.it/m.rinott>
+
+modified on 8 Nov 2013
+by Scott Fitzgerald
+http://www.arduino.cc/en/Tutorial/Knob
+*/
+
 #include <Servo.h>
-#include <Adafruit_MAX31856.h>
 
-int motor_pin = 9;
-int iDirection = -1;
-int directionStop = 0;
-Servo myServo;
+Servo myservo;  // create servo object to control a servo
 
-// _servoDirection < 0  : left
-// _servoDirection == 0 : stop
-// _servoDirection > 0  : right
-// void controlServoDirection(int _servoDirection);
+// int potpin = 0;  // analog pin used to connect the potentiometer
+int val;    // variable to read the value from the analog pin
 
 void setup() {
-	myServo.attach(motor_pin);
-	Serial.begin(9600);
+	myservo.attach(11);  // attaches the servo on pin 9 to the servo object
 }
+
 void loop() {
-	
+// val = analogRead(potpin);            // reads the value of the potentiometer (value between 0 and 1023)
+// val = map(val, 0, 1023, 0, 180);     // scale it to use it with the servo (value between 0 and 180)
+// myservo.write(val);                  // sets the servo position according to the scaled value
+	// myservo.writeMicroseconds(1500);
 	servoStop();
+	delay(5000); 						// waits for the servo to get there
+
+	// servoUp();
+	// delay(1000);
+
+	// servoStop();
+	// delay(5000); 						// waits for the servo to get there
+
+	// servoDown();
+	// delay(1000);
 }
 
-void servoR(){
-	myServo.writeMicroseconds(2000);
-	Serial.println("R!");
-}
-
-void servoL(){
-	myServo.writeMicroseconds(1000);
-	Serial.println("L!");
-}
 
 void servoStop(){
-	myServo.writeMicroseconds(1500);
-	Serial.println("Stop!");
+	myservo.detach();
+	pinMode(11, OUTPUT);
+	digitalWrite(11, LOW);
+}
+
+void servoUp(){
+	myservo.attach(11);
+	myservo.writeMicroseconds(1000);
+}
+
+void servoDown(){
+	myservo.attach(11);
+	myservo.writeMicroseconds(2000);
 }
