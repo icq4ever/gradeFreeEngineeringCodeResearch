@@ -1,7 +1,8 @@
+#include <Wire.h>
+#include <Adafruit_PWMServoDriver.h>
 #include <SPI.h>
 #include <RH_RF95.h>
 #include <Adafruit_MAX31856.h>     // thermal module
-#include <Servo.h>
 
 
 
@@ -10,7 +11,12 @@ const int RFM95_CS			= 8;
 const int RFM95_RST			= 4;
 const int RFM95_INT			= 7;
 const float RF95_FREQ		= 433.0;
+
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
+Adafruit_PWMServoDriver servo = Adafruit_PWMServoDriver();
+const int SERVOMIN = 1000;
+const int SERVOMAX = 2000;
+uint8_t servoNum = 7;
 
 const int REQ_MESSAGE_SIZE = 2;
 const int REQ_BUFFER_SIZE = REQ_MESSAGE_SIZE +2;
@@ -81,7 +87,7 @@ int outputBypassPinList[NUM_OF_BYPASSOUT];
 
 const int BUZZER_MICROHERZ		= 250;
 const int BUZZER_DUTYCYCLE		= 0.5;
-Servo servo;
+// Servo servo;
 
 enum btnTypes{
 	BTN_MOMENT,
@@ -139,8 +145,11 @@ void setup() {
 	digitalWrite(PIN_LED, LOW);
 
 	lastServoUp = lastServoDown = lastServoUp = false;
-	servo.attach(PIN_SERVO_PWM, 1000, 2000);
-	servo.writeMicroseconds(1500);
+
+	servo.begin();
+	servo.setPWMFreq(50);
+	// servo.attach(PIN_SERVO_PWM, 1000, 2000);
+	// servo.writeMicroseconds(1500);
 
 
 	// init MAX31856 
@@ -163,6 +172,20 @@ void setup() {
 	initLoRa();
 
 }
+
+// void setServoPulse(uint8_t n, double pulse) {
+//   double pulselength;
+  
+//   pulselength = 1000000;   // 1,000,000 us per second
+//   pulselength /= 60;   // 60 Hz
+//   Serial.print(pulselength); Serial.println(" us per period"); 
+//   pulselength /= 4096;  // 12 bits of resolution
+//   Serial.print(pulselength); Serial.println(" us per bit"); 
+//   pulse *= 1000;
+//   pulse /= pulselength;
+//   Serial.println(pulse);
+//   servo.setPWM(n, 0, pulse);
+// }
 
 void loop() {
 	// getTempData();
@@ -350,29 +373,27 @@ void noodleUpDown(int _rotateCtrl){
 
 	if(_rotateCtrl < 2)	{
 		if(!lastServoUp){
-			Serial.println("Up");
-			servo.writeMicroseconds(2000);	// 1 : right 
+			// Serial.println("Up");
+			servo.setPWM(0, 0, 409);	// 1 : right 
 			lastServoStop = false;
 			lastServoUp = true;
 			lastServoDown = false;
 		}
 	} else if(_rotateCtrl > 2)	{
 		if(!lastServoDown){
-			Serial.println("Down");
-			servo.writeMicroseconds(1000);	// 3 : left
+			// Serial.println("Down");
+			servo.setPWM(0, 0, 205);	// 3 : left
 			lastServoStop = false;
 			lastServoUp = false;
 			lastServoDown = true;
-			// Serial.println("Servo Down!");
 		}
 	} else	{
 		if(!lastServoStop){
 			Serial.println("stop");
-			servo.writeMicroseconds(1500);	// 2 : stop
+			servo.setPWM(0, 0, 290);	// 2 : stop
 			lastServoStop = true;
 			lastServoUp = false;
 			lastServoDown = false;
-			// Serial.println("Servo Stop!");
 		}
 	}	
 }
