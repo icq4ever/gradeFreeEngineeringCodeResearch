@@ -32,6 +32,8 @@ ButtonIndicator btnIndicator;
 ArrayList <PVector> waterTempLog = new ArrayList<PVector>();
 ArrayList <PVector> noodleTempLog = new ArrayList<PVector>();
 
+RaphagoActionList actionList;
+
 void setup(){
     size(1920, 1200);
 
@@ -50,7 +52,7 @@ void setup(){
     timerFont = loadFont("DejaVuSansMonoForPowerline-Bold-120.vlw");
 
     btnIndicator = new ButtonIndicator();
-    
+    actionList = new RaphagoActionList();    
 }
 
 void draw(){
@@ -63,6 +65,10 @@ void draw(){
     btnIndicator.draw(buttonStatus, 1500, 40);  
 
     drawTimer(1400, 40); // draw Timer
+
+    if(bStart){
+        actionList.update(millis() - startTimer);
+    }
 }
 
 
@@ -368,6 +374,7 @@ void serialEvent(Serial port){
     if(buttonStatus[7] && !bStart)  {
         bStart = true;
         startTimer = millis();
+        actionList.activate(); 
     }
 }
 
@@ -377,6 +384,7 @@ void keyReleased(){
             bStart = false;
             waterTempLog.clear();
             noodleTempLog.clear();
+            actionList.deactivate();
             //noodleTempLog.clear();
         }
     }
