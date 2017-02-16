@@ -250,6 +250,7 @@ void receiveMessage(){
 		if(rf95.recv(recvBuffer, &recvBufferLen)){
 			digitalWrite(PIN_LED, HIGH);
 			// recv ok
+			// Serial.println("request received");
 			if(recvBuffer[0] == '/'){
 				if(recvBuffer[1] == 'R'){
 					// digitalWrite(PIN_LED, HIGH);
