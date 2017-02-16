@@ -268,9 +268,9 @@ void receiveMessage(){
 					reply[9] = 0;
 
 					rf95.send(reply, sizeof(reply));
-					// digitalWrite(PIN_LED, LOW);
-					// Serial.println("Temp Data Sent!");
-					// printTempData();
+					digitalWrite(PIN_LED, LOW);
+					Serial.println("Temp Data Sent!");
+					printTempData();
 				}
 
 				if(recvBuffer[1] == 'B'){

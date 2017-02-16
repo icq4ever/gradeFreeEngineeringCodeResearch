@@ -104,22 +104,22 @@ void drawScreen2(float _x, float _y){
 
 void updateRemoteModuleMessage(){
 	// noodle Cooling
-	for(int i=0; i=3; i++){
+	for(int i=0; i<3; i++){
 		if(controlModuleButtonStatus[i+1])		remoteModuleMessage[i] = 1;
 		else 									remoteModuleMessage[i] = 0;
 	}
 
 	// ball heating
 	if(controlModuleButtonStatus[4])			remoteModuleMessage[3] = 1;
-	else 										retmoeModuleMessage[3] = 0;
+	else 										remoteModuleMessage[3] = 0;
 
 	// ball release
 	if(controlModuleButtonStatus[5])			remoteModuleMessage[4] = 1;
-	else 										retmoeModuleMessage[4] = 0;
+	else 										remoteModuleMessage[4] = 0;
 
 	// egg breaking
 	if(controlModuleButtonStatus[6])			remoteModuleMessage[5] = 1;
-	else 										retmoeModuleMessage[5] = 0;
+	else 										remoteModuleMessage[5] = 0;
 
 	// 
 	if((!controlModuleButtonStatus[7] && !controlModuleButtonStatus[8]) || controlModuleButtonStatus[7] && controlModuleButtonStatus[8]){
@@ -141,7 +141,7 @@ void noodleDown(){
 	remoteModuleMessage[6] = -1;
 }
 void noodleStop(){
-	remoteModuleMesage[6] = 0;
+	remoteModuleMessage[6] = 0;
 }
 
 
@@ -149,7 +149,7 @@ void serialEvent(Serial port){
 	if(port == controlModule){
 		// read from controlModule
 		// save button state simultanously
-		String inString = port.readStringUnti('\n');
+		String inString = port.readStringUntil('\n');
 
 		if(inString !=null){
 			inString = trim(inString);
