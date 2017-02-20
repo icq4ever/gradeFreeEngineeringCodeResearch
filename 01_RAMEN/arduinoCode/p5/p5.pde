@@ -33,6 +33,7 @@ ArrayList <PVector> waterTempLog = new ArrayList<PVector>();
 ArrayList <PVector> noodleTempLog = new ArrayList<PVector>();
 
 RaphagoActionList actionList;
+MyunPulse myunRate;
 
 void setup(){
     size(1920, 1200);
