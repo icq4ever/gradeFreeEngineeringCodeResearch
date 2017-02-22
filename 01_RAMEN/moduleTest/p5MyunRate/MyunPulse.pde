@@ -50,10 +50,13 @@ class MyunPulse{
 		
 		if(x > w/xspacing-1)  {
 			x = 0;
-			fill(0);
+			fill(50);
 			rectMode(CENTER);
 			noStroke();
 			rect(w/2, 200, w+50, 400);
+			// strokeWeight(0.5);
+			// stroke(255);
+			// line(0, height/2, width, height/2);
 		}
 
 		
