@@ -24,6 +24,7 @@ class MyunPulse{
 		// theta += 2;
 
 		float x = theta;
+		dx = (TWO_PI / period) * xspacing;
 		for (int i = 0; i < yvalues.length; i++) {
 			yvalues[i] = sin(x)*amplitude;
 			x+=dx;
@@ -70,8 +71,9 @@ class MyunPulse{
 		popMatrix();
 	}
 
+	// input : 0 ~ 1 (period)
 	void setPeriod(float _period){
-		period = _period;
+		period = map(_period, 0, 1, 20, 800);
 	}
 
 	void setAmplitude(float _amp){
