@@ -3,10 +3,20 @@
     "command": "processing-java",
     "isShellCommand": true,
     "showOutput": "never",
-    "args": [
-        "--force",
-        "--sketch=${fileDirname}",
-        "--output=${fileDirname}\\out",
-        "--run"
-    ]
+    "windows":{
+        "args": [
+            "--force",
+            "--sketch=${fileDirname}",
+            "--output=${fileDirname}\\out",
+            "--run"
+        ]
+    },
+    "osx":{
+        "args": [
+            "--force",
+            "--sketch=${fileDirname}",
+            "--output=${fileDirname}\\out",
+            "--run"
+        ]
+    }
 }
