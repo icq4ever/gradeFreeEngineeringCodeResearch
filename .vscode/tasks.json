@@ -15,7 +15,7 @@
         "args": [
             "--force",
             "--sketch=${fileDirname}",
-            "--output=${fileDirname}\\out",
+            "--output=${fileDirname}//out",
             "--run"
         ]
     }
