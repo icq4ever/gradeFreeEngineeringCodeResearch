@@ -5,7 +5,7 @@ float ROOM_TEMP = 20;
 
 Serial feather;
 
-boolean bStart = true;
+boolean bStart = false;
 boolean bMouseAnalysisOn = false;
 float startTimer = 0;
 int maxMIN = 12;
@@ -25,7 +25,6 @@ String buttonLabel[] = new String[10];
 ButtonIndicator btnIndicator;
 
 ArrayList <PVector> waterTempLog = new ArrayList<PVector>();
-ArrayList <PVector> noodleTempLog = new ArrayList<PVector>();
 
 RaphagoActionList actionList;
 MyunPulse myunPulse;
@@ -45,7 +44,7 @@ void setup(){
         feather  = new Serial(this, Serial.list()[0], 115200);  // windows
     }
     feather.bufferUntil('\n');
-    myunPulse = new MyunPulse(300, 100, 50);
+    myunPulse = new MyunPulse(400, 100, 50);
 
     // load Font
     // displayCheckFont = loadFont("Hack-Bold-120.vlw");
@@ -68,9 +67,9 @@ void draw(){
 
     drawTimer(1400, 80); // draw Timer
 
-    myunPulse.setPeriod(millis()- startTimer);
+    myunPulse.setPeriod(50);
     myunPulse.calcWave();
-    myunPulse.renderWave(2000, 100);
+    myunPulse.renderWave(2000, 100, 3);
     if(bStart){
         actionList.update(millis() - startTimer);
     }
@@ -184,7 +183,6 @@ void drawThermalAxis(float _width, float _height){
             strokeWeight(2);
             line(-10, graphHeight-i*graphHeight/(detailLevel*5), 10, graphHeight-i*graphHeight/(detailLevel*5));
             
-
             pushStyle();
             textAlign(RIGHT, CENTER);
             fill(#FFFFFF);
@@ -329,38 +327,6 @@ void drawRealThermalGraph(float _width, float _height){
         }
         popStyle();
 
-
-
-        // noodleTemp
-        pushStyle();
-        stroke(#00FFFF);
-        strokeWeight(3);
-        if(noodleTempLog.size() >1){
-            for(int i=1; i<noodleTempLog.size(); i++){
-                if(i == 1)  line(0, 800-celcius2Pixel(0, 800), milliSec2Pixel(noodleTempLog.get(i).x, 1800), 800- celcius2Pixel(noodleTempLog.get(i).y, 800));
-                else        line(milliSec2Pixel(noodleTempLog.get(i-1).x, 1800), 800- celcius2Pixel(noodleTempLog.get(i-1).y, 800), milliSec2Pixel(noodleTempLog.get(i).x, 1800), 800- celcius2Pixel(noodleTempLog.get(i).y, 800));
-            }
-        }
-        textFont(displayCheckFont);
-        textSize(18);
-        fill(#00FFFF);
-        noStroke();
-        textAlign(LEFT, BOTTOM);
-        text(formatDegree.format(noodleTemp) + " °C", milliSec2Pixel(millis()-startTimer, 1800), 800 - celcius2Pixel(noodleTemp, 800) + 20);
-
-        noFill();
-        strokeWeight(1);
-        stroke(#E0E0E0);
-        if(noodleTempLog.size() > 1){
-            line( milliSec2Pixel(millis()-startTimer,1800), 800, 
-                  milliSec2Pixel(millis()-startTimer,1800), 800 - celcius2Pixel(noodleTempLog.get(noodleTempLog.size()-1).y, 800)
-                );
-            line(0, 800 - celcius2Pixel(noodleTempLog.get(noodleTempLog.size()-1).y, 800),
-                milliSec2Pixel(millis()-startTimer,1800), 800 - celcius2Pixel(noodleTempLog.get(noodleTempLog.size()-1).y, 800)
-                );
-        }
-        popStyle();
-
     }
 
 
@@ -419,5 +385,5 @@ void keyReleased(){
 }
 
 void mousePressed(){
-    bMouseAnalysisOn = !bMouseAnalysisOn;
+    // bMouseAnalysisOn = !bMouseAnalysisOn;
 }
