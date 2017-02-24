@@ -2,6 +2,7 @@ class MyunPulse{
 
 	int xspacing = 4;   		// How far apart should each horizontal location be spaced
 	int w;              		// Width of entire wave
+	int h;
 
 	float theta = 0.0;  		// Start angle at 0
 	float amplitude = 75.0;  	// Height of wave
@@ -11,10 +12,11 @@ class MyunPulse{
 	int x;
 	float strokeWidth = 5;
 
-	MyunPulse(int _w, float _amp) {
+	MyunPulse(int _w, int _h, float _amp) {
 		// size(640, 360);
 		amplitude = _amp;
 		w = _w+16;
+		h = _h+40;
 		dx = (TWO_PI / period) * xspacing;
 		yvalues = new float[20000/xspacing];
 	}
@@ -30,9 +32,11 @@ class MyunPulse{
 		}
 	}
 
+
 	void renderWave(float _x, float _y) {
 		pushMatrix();
 		translate(_x, _y);
+		pushStyle();
 
 		noFill();
 		stroke(255);
@@ -44,29 +48,41 @@ class MyunPulse{
 		// }
 
 		// point(x*xspacing, height/2+yvalues[x]);
-		line(x*xspacing, height/2+yvalues[x], (x+1)*xspacing, height/2+yvalues[x+1]);
+		line(x*xspacing, h/2+yvalues[x], (x+1)*xspacing, h/2+yvalues[x+1]);
 		x++;
 		
-		if(x > w/xspacing-1)  {
+		if(x > w/xspacing)  {
 			x = 0;
-			fill(0);
-			rectMode(CENTER);
+			pushStyle();
+			fill(20);
+			rectMode(CORNER);
 			noStroke();
-			rect(w/2, 200, w+50, 400);
+			rect(0, 0, w, h);
+			popStyle();
 		}
 
 		
 		pushStyle();
 		fill(0, 10);
 		noStroke();
-		rectMode(CENTER);
-		rect(w/2, 200, w+50, 400);
+		rectMode(CORNER);
+		rect(0, 0, w, h);
 		popStyle();
 
 		noFill();
 		stroke(255);
 		strokeWeight(1);
 		
+		popStyle();
+
+
+		pushStyle();
+		fill(10);
+		noStroke();
+		rectMode(CORNER);
+		rect(-10, -10, 10, h+20);
+		rect(w, -10, 10, h+20);
+		popStyle();
 		popMatrix();
 	}
 
