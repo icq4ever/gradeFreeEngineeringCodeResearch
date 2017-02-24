@@ -22,8 +22,8 @@ class ButtonIndicator{
     	btnLabel[2] = "SOLENOID\n3";
 	    btnLabel[3] = "DROP\nBALL";
 	    btnLabel[4] = "HEATING\nBALL";;
-	    btnLabel[5] = "SERVO\nUP";
-	    btnLabel[6] = "SERVO\nDOWN";
+	    btnLabel[6] = "SERVO\nUP";
+	    btnLabel[5] = "SERVO\nDOWN";
 	    btnLabel[7] = "START";
 	    btnLabel[8] = "EGG\nBREAKER";
 	    btnLabel[9] = "HOT\nWATER";
@@ -48,14 +48,14 @@ class ButtonIndicator{
 		// servo UP
 		noFill();	
 		rect(40, 140, 30, 30);
-		if(_b[5])	fill(#FFFF00);
+		if(_b[6])	fill(#FFFF00);
 		else 		noFill();
 		rect(40, 140, 30, 30);
 
 		// servo DOWN
 		noFill();
 		rect(40, 180, 30, 30);
-		if(_b[6])	fill(#FFFF00);
+		if(_b[5])	fill(#FFFF00);
 		else 		noFill();
 		rect(40, 180, 30, 30);
 
