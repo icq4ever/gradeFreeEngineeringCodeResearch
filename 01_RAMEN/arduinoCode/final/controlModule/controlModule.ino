@@ -9,8 +9,8 @@ const int PIN_SOLENOID_2_BTN    = A3;       // 2, MSG
 const int PIN_SOLENOID_3_BTN    = A4;       // 3, MSG
 const int PIN_DROP_MBALL_BTN    = A5;       // 4, MSG   
 const int PIN_HEATING_MBALL_BTN = 5;        // 8, MSG   
-const int PIN_SERVO_UP_BTN      = 9;        // 9
-const int PIN_SERVO_DOWN_BTN    = 6;        // 10
+const int PIN_SERVO_UP_BTN      = 6;        // 9
+const int PIN_SERVO_DOWN_BTN    = 9;        // 10
 
 // I2C PORT EXPANDER
 // 0  : PIN_START_BTN
