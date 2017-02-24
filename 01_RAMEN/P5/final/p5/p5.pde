@@ -1,9 +1,3 @@
-/*
-    [ ] : SEQUENCE INDICATOR
-    [ ] : BUTTON INDICATOR
-    [ ] : TIMER 
-*/
-
 import processing.serial.*;
 import java.text.DecimalFormat;                 // 소수점 표기
 
@@ -170,7 +164,7 @@ void drawThermalAxis(float _width, float _height){
             textAlign(LEFT, TOP);
             fill(#FFFFFF);
             noStroke();
-            text(pixel2Second(i*graphWidth/(maxMIN*12), graphWidth) + "Min" , i*graphWidth/(maxMIN*12), _height+30);
+            text(pixel2Second(i*graphWidth/(maxMIN*12), graphWidth) + "Min" , i*graphWidth/(maxMIN*12)-10, _height+30);
             popStyle();
         } else {
             strokeWeight(1);
@@ -255,7 +249,7 @@ void drawTimer(float _x, float _y){
 }
 
 
-// ======================================================================== CONVERT =====
+// ======================================================================== CONVERT UTILITY =====
 int pixel2Second(float _pixelLength, float _pixelWidth){
     return (int)map(_pixelLength, 0, _pixelWidth, 0, maxMIN*600)/600;
 }
@@ -272,7 +266,27 @@ float celcius2Pixel(float _temp, float _pixelHeight){
     return map(_temp, 0, MAX_TEMP, 0, _pixelHeight);
 }
 
-// ======================================================================================
+// convert millis to string(min:sec:millis)
+String millisToString(float _millis){
+    int mil = (int)_millis%1000;
+    int sec = ((int)(_millis)/1000) % 60;
+    int min = ((int)(_millis)/60000) % 60;
+    
+    String tMil, tSec, tMin;
+
+    if(mil < 10)        {tMil = "00" + Integer.toString(mil);}
+    else if(mil < 100)  {tMil = "0"  + Integer.toString(mil);}
+    else                {tMil = Integer.toString(mil);}
+
+    if(sec < 10)    tSec = "0" + Integer.toString(sec);
+    else            tSec = Integer.toString(sec);
+
+    tMin = Integer.toString(min);
+
+    return (tMin+ ":" + tSec + "." + tMil);
+}
+
+// =============================================================================================
 
 
 void drawRealThermalGraph(float _width, float _height){
@@ -402,23 +416,4 @@ void keyReleased(){
 
 void mousePressed(){
     bMouseAnalysisOn = !bMouseAnalysisOn;
-}
-
-String millisToString(float _millis){
-    int mil = (int)_millis%1000;
-    int sec = ((int)(_millis)/1000) % 60;
-    int min = ((int)(_millis)/60000) % 60;
-    
-    String tMil, tSec, tMin;
-
-    if(mil < 10)        {tMil = "00" + Integer.toString(mil);}
-    else if(mil < 100)  {tMil = "0"  + Integer.toString(mil);}
-    else                {tMil = Integer.toString(mil);}
-
-    if(sec < 10)    tSec = "0" + Integer.toString(sec);
-    else            tSec = Integer.toString(sec);
-
-    tMin = Integer.toString(min);
-
-    return (tMin+ ":" + tSec + "." + tMil);
 }
