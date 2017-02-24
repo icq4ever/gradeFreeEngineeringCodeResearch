@@ -38,7 +38,13 @@ void setup(){
     // size(3840, 1080);
 
     // setup control module
-    feather  = new Serial(this, Serial.list()[1], 115200);
+
+    // detect OS 
+    if(System.getProperty("os.name")== "Mac OS X"){
+        feather  = new Serial(this, Serial.list()[1], 115200);  // osx
+    } else {
+        feather  = new Serial(this, Serial.list()[0], 115200);  // windows
+    }
     feather.bufferUntil('\n');
     myunPulse = new MyunPulse(300, 50);
 
