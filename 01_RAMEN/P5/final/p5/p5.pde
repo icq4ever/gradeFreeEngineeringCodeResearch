@@ -5,7 +5,7 @@ float ROOM_TEMP = 20;
 
 Serial feather;
 
-boolean bStart = false;
+boolean bStart = true;
 boolean bMouseAnalysisOn = false;
 float startTimer = 0;
 int maxMIN = 12;
@@ -31,10 +31,9 @@ RaphagoActionList actionList;
 MyunPulse myunPulse;
 
 void setup(){
-    size(1920, 1200);
-
     // full dimensions across all of the attached screens with below command
-    // fullScreen(P3D, SPAN);    
+    fullScreen(SPAN);   
+    background(10); 
     // size(3840, 1080);
 
     // setup control module
@@ -46,7 +45,7 @@ void setup(){
         feather  = new Serial(this, Serial.list()[0], 115200);  // windows
     }
     feather.bufferUntil('\n');
-    myunPulse = new MyunPulse(300, 50);
+    myunPulse = new MyunPulse(300, 100, 50);
 
     // load Font
     // displayCheckFont = loadFont("Hack-Bold-120.vlw");
@@ -59,16 +58,19 @@ void setup(){
 }
 
 void draw(){
-    background(10);
+    // background(10);
 
     // btnIndicator.update(buttonStatus);
     drawScreen1(0, 0);
     
-    // drawScreen2(1920, 0);
+    drawScreen2(1920, 0);
     btnIndicator.draw(buttonStatus, 1500, 80);  
 
     drawTimer(1400, 80); // draw Timer
 
+    myunPulse.setPeriod(millis()- startTimer);
+    myunPulse.calcWave();
+    myunPulse.renderWave(2000, 100);
     if(bStart){
         actionList.update(millis() - startTimer);
     }
@@ -155,10 +157,6 @@ void drawThermalAxis(float _width, float _height){
     // 6MIN : 6 *12 + 1
     // 15MIN : 15*12+1
     // time Dimension (X)
-
-    
-
-
     for(int i=0; i<(maxMIN*12+1); i++){
         if(i%12 == 0)    {
             strokeWeight(2);
@@ -201,7 +199,7 @@ void drawThermalAxis(float _width, float _height){
 
 
     // mouse analysis
-    if(bMouseAnalysisOn && mouseY < 1060 && mouseX > 80){
+    if(bMouseAnalysisOn && mouseY < 1060 && mouseX > 8 && mouseX < 1920){
         pushStyle();
 
         noFill();
