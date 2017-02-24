@@ -14,6 +14,7 @@ Serial feather;
 boolean bStart = false;
 boolean bMouseAnalysisOn = false;
 float startTimer = 0;
+int maxMIN = 12;
 float MAX_TEMP=140;
 
 float waterTemp, noodleTemp;
@@ -151,12 +152,17 @@ void drawThermalAxis(float _width, float _height){
     line(0, graphHeight, graphWidth, graphHeight);
     line(0, graphHeight, 0, 0);
 
-
+    // 6MIN : 6 *12 + 1
+    // 15MIN : 15*12+1
     // time Dimension (X)
-    for(int i=0; i<73; i++){
+
+    
+
+
+    for(int i=0; i<(maxMIN*12+1); i++){
         if(i%12 == 0)    {
             strokeWeight(2);
-            line(i*graphWidth/72, _height-20, i*graphWidth/72, _height+20);
+            line(i*graphWidth/(maxMIN*12), _height-20, i*graphWidth/(maxMIN*12), _height+20);
 
             // draw minute legend
             pushStyle();
@@ -164,11 +170,11 @@ void drawThermalAxis(float _width, float _height){
             textAlign(LEFT, TOP);
             fill(#FFFFFF);
             noStroke();
-            text(pixel2Second(i*graphWidth/72, graphWidth) + "Min" , i*graphWidth/72, _height+30);
+            text(pixel2Second(i*graphWidth/(maxMIN*12), graphWidth) + "Min" , i*graphWidth/(maxMIN*12), _height+30);
             popStyle();
         } else {
             strokeWeight(1);
-            line(i*graphWidth/72, _height-10, (i)*graphWidth/72, _height+10);
+            line(i*graphWidth/(maxMIN*12), _height-10, (i)*graphWidth/(maxMIN*12), _height+10);
         }     
     }
 
@@ -251,7 +257,7 @@ void drawTimer(float _x, float _y){
 
 // ======================================================================== CONVERT =====
 int pixel2Second(float _pixelLength, float _pixelWidth){
-    return (int)map(_pixelLength, 0, _pixelWidth, 0, 3600)/600;
+    return (int)map(_pixelLength, 0, _pixelWidth, 0, maxMIN*600)/600;
 }
 
 int pixel2Celcius(float _pixelLength, float _pixelHeight){
@@ -259,7 +265,7 @@ int pixel2Celcius(float _pixelLength, float _pixelHeight){
 }
 
 float milliSec2Pixel(float _millis, float _pixelWidth){
-    return map(_millis, 0, 360000, 0, _pixelWidth);
+    return map(_millis, 0, maxMIN*60*1000, 0, _pixelWidth);
 }
 
 float celcius2Pixel(float _temp, float _pixelHeight){
