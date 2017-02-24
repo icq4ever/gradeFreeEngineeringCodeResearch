@@ -11,7 +11,7 @@ float startTimer = 0;
 int maxMIN = 12;
 float MAX_TEMP=140;
 
-float waterTemp, noodleTemp;
+float waterTemp;
 
 // UIFont
 PFont displayCheckFont;
@@ -296,10 +296,9 @@ void drawRealThermalGraph(float _width, float _height){
     else {
         DecimalFormat formatDegree = new DecimalFormat("#.##");
 
-
         // waterTemp
         pushStyle();
-        stroke(#FFFF00);
+        stroke(#00FFFF);
         strokeWeight(3);
         if(waterTempLog.size() >1){
             for(int i=1; i<waterTempLog.size(); i++){
@@ -309,10 +308,10 @@ void drawRealThermalGraph(float _width, float _height){
         }
         textFont(displayCheckFont);
         textSize(18);
-        fill(#FFFF00);
+        fill(#00FFFF);
         noStroke();
         textAlign(LEFT, BOTTOM);
-        text(formatDegree.format(waterTemp) + " °C", milliSec2Pixel(millis()-startTimer, 1800), 800 - celcius2Pixel(waterTemp, 800) - 10);
+        text(formatDegree.format(waterTemp) + " °C", milliSec2Pixel(millis()-startTimer, 1800), 800 - celcius2Pixel(waterTemp, 800) + 20);
 
         noFill();
         strokeWeight(1);
@@ -353,15 +352,15 @@ void serialEvent(Serial port){
             }
         }
 
-        noodleTemp = Float.parseFloat(items[10]);
-        waterTemp = Float.parseFloat(items[11]);
+        waterTemp = Float.parseFloat(items[10]);
+        
 
         if(bStart) {
+            
             PVector _waterTemp = new PVector(millis() - startTimer, waterTemp);
-            PVector _noodleTemp = new PVector(millis() - startTimer, noodleTemp);
+            
             waterTempLog.add(_waterTemp);
-            noodleTempLog.add(_noodleTemp);
-            // noodleTempLog.add(_noodleTemp);
+            // waterTempLog.add(_waterTemp);
         } 
     }
 
@@ -376,10 +375,10 @@ void keyReleased(){
     if(key == ' ' ) {
         if(bStart)  {
             bStart = false;
+
             waterTempLog.clear();
-            noodleTempLog.clear();
             actionList.deactivate();
-            //noodleTempLog.clear();
+            //waterTempLog.clear();
         }
     }
 }
