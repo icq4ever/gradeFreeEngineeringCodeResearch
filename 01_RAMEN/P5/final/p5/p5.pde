@@ -64,9 +64,9 @@ void draw(){
     drawScreen1(0, 0);
     
     // drawScreen2(1920, 0);
-    btnIndicator.draw(buttonStatus, 1500, 40);  
+    btnIndicator.draw(buttonStatus, 1500, 80);  
 
-    drawTimer(1400, 40); // draw Timer
+    drawTimer(1400, 80); // draw Timer
 
     if(bStart){
         actionList.update(millis() - startTimer);
@@ -77,6 +77,8 @@ void draw(){
 // draw ideal temp 
 // maximum 6min
 void drawScreen1(float _x, float _y){
+    
+    
     pushMatrix();
     pushStyle();
     translate(_x, _y);
