@@ -6,11 +6,11 @@ class MyunPulse{
 
 	float theta = 0.0;  		// Start angle at 0
 	float amplitude = 75.0;  	// Height of wave
-	float period = 200.0;  		// How many pixels before the wave repeats
+	float period = 100.0;  		// How many pixels before the wave repeats
 	float dx;  					// Value for incrementing X, a function of period and xspacing
 	float[] yvalues;  			// Using an array to store height values for the wave
 	int x;
-	float strokeWidth = 5;
+	float strokeWidth = 3;
 
 	MyunPulse(int _w, int _h, float _amp) {
 		// size(640, 360);
@@ -26,6 +26,7 @@ class MyunPulse{
 		// theta += 2;
 
 		float x = theta;
+		dx = (TWO_PI / period) * xspacing;
 		for (int i = 0; i < yvalues.length; i++) {
 			yvalues[i] = sin(x)*amplitude;
 			x+=dx;
@@ -33,9 +34,10 @@ class MyunPulse{
 	}
 
 
-	void renderWave(float _x, float _y) {
+	void renderWave(float _x, float _y, float _scale) {
 		pushMatrix();
 		translate(_x, _y);
+		scale(_scale, _scale);
 		pushStyle();
 
 		noFill();
@@ -47,7 +49,7 @@ class MyunPulse{
 		  // line(x*xspacing, height/2+yvalues[x], (x+1)*xspacing, height/2+yvalues[x+1]);
 		// }
 
-		// point(x*xspacing, height/2+yvalues[x]);
+		// point(x*xspacing, h/2+yvalues[x]);
 		line(x*xspacing, h/2+yvalues[x], (x+1)*xspacing, h/2+yvalues[x+1]);
 		x++;
 		
