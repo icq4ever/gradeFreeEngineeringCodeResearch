@@ -40,7 +40,8 @@ class TwoDimensionGraph {
         noStroke();
         rect(_x, _centerY - h/2, 100, 20);
         fill(0);
-        
+        // taextFont
+        textSize(12);
         text(title + " : " + data, _x + 10, _centerY - h/2 + 14);
         popStyle();
         
