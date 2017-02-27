@@ -40,9 +40,12 @@ class GForceVis {
         translate(_x, _y);
         
                 
-        line(-w/2-10, 0, w/2+10, 0);
-        line(0, -w/2-10, 0, w/2+10);
+        // line(-w/2-10, 0, w/2+10, 0);
+        // line(0, -w/2-10, 0, w/2+10);
+        strokeWeight(10);
+        point(0, 0);
 
+        strokeWeight(1);
         for (int i=0; i<step+1; i++) {
             ellipse(0, 0, i*w/step, i*h/step);
         }
