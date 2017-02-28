@@ -40,7 +40,7 @@ class TwoDimensionGraph {
             //title
             fill(255, 255, 0);
             noStroke();
-            rect(0, 0, 100, 20);
+            rect(0, 0, 120, 20);
             fill(0);
             // taextFont
             textSize(12);
