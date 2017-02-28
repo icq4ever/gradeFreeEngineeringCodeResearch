@@ -4,6 +4,7 @@ import processing.serial.*;
 GForceVis deltaVis;
 TwoDimensionGraph XVis;
 TwoDimensionGraph YVis;
+TwoDimensionGraph ZVis;
 float GFMin, GFMax;
 
 float sensorX, sensorY, sensorZ;
@@ -32,9 +33,11 @@ float size;
 
 int numberOfBuffer = 500;
 
+static float stablizeThreshold = 0.4;
+
 
 void setup() {
-	size(1920, 1080);
+	size(1600,900);
 	frameRate(60);
 	clock = new TimeTemplate();
 	shootLog = new ShootHistoryBook();
@@ -50,8 +53,9 @@ void setup() {
 	GFMax = 640;
 	// gVis = new GForceVis(300, 300, -10, 10, 4);
 	deltaVis = new GForceVis(600, 600, -20, 20, 5);
-	XVis = new TwoDimensionGraph("X-AXIS", 550, 300, -10, 10);
-	YVis = new TwoDimensionGraph("Y-AXIS", 550, 300, -10, 10);
+	XVis = new TwoDimensionGraph("X-AXIS", 300, 200, -10, 10);
+	YVis = new TwoDimensionGraph("Y-AXIS", 300, 200, -10, 10);
+	ZVis = new TwoDimensionGraph("Z-AXIS", 300, 200, -10, 10);
 
 	cont = false;
 	bGraphOn = false;
@@ -70,55 +74,93 @@ void draw() {
 	updateBG();
 
 	// if (cont)    {
-	pushData(sensorX, sensorY);
-	pushDeltaData(deltaX, deltaY);
+	pushData(sensorX, sensorY, sensorZ);
+	pushDeltaData(deltaX, deltaY, deltaZ);
 	// }
 	
 	review();
 
 	
 	// gVis.draw(250, 200);
-	deltaVis.draw(width/2, height/2);
+	
 
 	if(bGraphOn) {
-		XVis.draw(width/4, 200);
-		YVis.draw(width/4, 600);
+		XVis.draw(width-40-300, 200);
+		YVis.draw(width-40-300, 420);
+		ZVis.draw(width-40-300, 640);
 	}
 
 	clock.update();
+
 	pushStyle();
 	clock.draw(40, height-60, false);
 	popStyle();
 
+	printShootLog();
+
+	deltaVis.draw(width/2, height/2);
+}
+
+void pushData(float _dataX, float _dataY, float _dataZ) {
+	PVector data = new PVector(_dataX, _dataY, _dataZ);
+	// gVis.pushData(data);
+	XVis.pushData(data.x);
+	YVis.pushData(data.y);
+	ZVis.pushData(data.z);
+}
+
+
+void printShootLog(){
 	if (shootLog.getSizeOfRecord() !=0) {
 		for (int i=0; i<shootLog.getSizeOfRecord(); i++) {
 			pushStyle();
 			fill(255, 255, 0);
-			text(shootLog.timeStamp.get(i), 40, 400+i*18);
-			fill(0, 255, 0);
-			text(shootLog.history.get(i).x, 200, 400+i*18);
-			text(shootLog.history.get(i).y, 280, 400+i*18);
+			// text(shootLog.timeStamp.get(i), 40, 400+i*18);
+			
+			if(i<9)		text("0"+ Integer.toString(i+1), 40, 200+i*18);
+			else  		text(i+1, 40, 200+i*18);
+			
+			
+			if(abs(shootLog.history.get(i).x) < stablizeThreshold)	fill(0, 255, 0);
+			else  													fill(255, 0, 0);
+			// text(shootLog.history.get(i).x, 240, 400+i*18);
+			text(shootLog.history.get(i).x, 100, 200+i*18);
+
+			if(abs(shootLog.history.get(i).y) < stablizeThreshold)	fill(0, 255, 0);
+			else  													fill(255, 0, 0);
+			// text(shootLog.history.get(i).y, 320, 400+i*18);
+			text(shootLog.history.get(i).y, 180, 200+i*18);
+
+			if(abs(shootLog.history.get(i).z) < stablizeThreshold)	fill(0, 255, 0);
+			else  													fill(255, 0, 0);
+			// text(shootLog.history.get(i).z, 400, 400+i*18);
+			text(shootLog.history.get(i).z, 260, 200+i*18);
+
 			popStyle();
+
+
+			// record drawing on target
+			pushMatrix();
+			translate(width/2, height/2);
+			pushStyle();
+			noFill();
+			stroke(#FF00FF);
+			strokeWeight(10);
+			point(map(shootLog.history.get(i).x, -10, 10, -300, 300), map(shootLog.history.get(i).y, -10, 10, -300, 300));
+			popStyle();
+			popMatrix();
 		}
 	}
 }
 
-void pushData(float _dataX, float _dataY) {
-	PVector data = new PVector(_dataX, _dataY);
-	// gVis.pushData(data);
-	XVis.pushData(data.x);
-	YVis.pushData(data.y);
-}
-
-
-void pushDeltaData(float _deltaX, float _deltaY){
-	PVector data = new PVector(_deltaX, _deltaY);
+void pushDeltaData(float _deltaX, float _deltaY, float _deltaZ){
+	PVector data = new PVector(_deltaX, _deltaY, _deltaZ);
 	deltaVis.pushData(data);
 }
 
 void review(){
 	if (cont) {
-		PVector _t = new PVector(sensorX, sensorY);
+		PVector _t = new PVector(deltaX, deltaY, deltaZ);
 		String _now = clock.getDateTime();
 
 		shootLog.pushRecord(_t, _now);
@@ -131,14 +173,15 @@ void review(){
 void keyPressed() {
 	if (key == 'c' || key == 'C') {
 		cont = true;
+		port.write('1');
 	}
 
 	if(key == 'g' || key == 'G'){
 		bGraphOn = !bGraphOn;
 	}
 
-	if(key == ' ' ){
-		bReviewOn = !bReviewOn;
+	if(key == ' '){
+		shootLog.clear();
 	}
 }
 
@@ -169,7 +212,7 @@ void serialEvent(Serial port){
 void updateBG(){
 	// blinkTimer  = map(delta, 0, 5, 300, 1000);
 
-	if(delta>0.4){
+	if(delta>stablizeThreshold){
 		bStablized = false;
 		size = map(delta, 1.2, 10, 0, 600);
 		fill(#FF0000);
@@ -191,34 +234,7 @@ void updateBG(){
 		noStroke();
 		ellipse(width/2, height/2, size, size);
 	}
-	// if(delta>1.2 && delta < 3.6){
-	// 	if(millis() - lastBlinkCheckTimer < 200)	{
-	// 		lastBlinkCheckTimer = millis();
-	// 		bBlinkOn = !bBlinkOn;
-		
-	// 	}
-	// 	if(bBlinkOn)	fill(255, 0, 0);
-	// 	else 			fill(0);
-	// 	noStroke();
-	// 	rect(0, 0, width, height);
-	// } else if (delta >= 3.6 ) {
-	// 	if(millis() - lastBlinkCheckTimer < 50)	{
-	// 		lastBlinkCheckTimer = millis();
-	// 		bBlinkOn = !bBlinkOn;
-		
-	// 	}
-	// 	if(bBlinkOn)	fill(255, 0, 0);
-	// 	else 			fill(0);
-	// 	noStroke();
-	// 	rect(0, 0, width, height);
-
-	// 	// fill(0);
-	// 	// text(delta;)
-	// } else {
-	// 	fill(#47C747);
-	// 	noStroke();
-	// 	rect(0, 0, width, height);
-	// }
+	
 	fill(0);
 	text(delta, 20, 20);
 }

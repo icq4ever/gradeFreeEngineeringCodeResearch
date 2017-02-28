@@ -66,13 +66,13 @@ class TimeTemplate {
 	String getClockString(){
 		String clockText = "";
 
-		if(hour < 0)    clockText += "0" + hour + ":";
+		if(hour < 10)    clockText += "0" + hour + ":";
 		else            clockText += hour + ":";
 
-		if(minute < 0)  clockText += "0" + minute + ":";
+		if(minute < 10)  clockText += "0" + minute + ":";
 		else            clockText += minute + ":";
 
-		if(second < 0)  clockText += "0" + second + ":";
+		if(second < 10)  clockText += "0" + second + ":";
 		else            clockText += second + ":";
 
 		if(milliSecond < 10)            clockText += "00" + milliSecond;

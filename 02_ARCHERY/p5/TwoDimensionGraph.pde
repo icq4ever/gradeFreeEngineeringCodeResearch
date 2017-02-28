@@ -1,5 +1,5 @@
 class TwoDimensionGraph {
-    int numberOfBuffer = 800;
+    int numberOfBuffer = 300;
     float[] buffer = new float[numberOfBuffer];
     
     float w, h;
@@ -34,36 +34,39 @@ class TwoDimensionGraph {
 
 
     void draw(float _x, float _centerY) {
-        //title
         pushStyle();
-        fill(255, 255, 0);
-        noStroke();
-        rect(_x, _centerY - h/2, 100, 20);
-        fill(0);
-        // taextFont
-        textSize(12);
-        text(title + " : " + data, _x + 10, _centerY - h/2 + 14);
-        popStyle();
-        
-        pushStyle();
-        stroke(255, 255, 255);
-        noFill();
         pushMatrix();
-        translate(_x, _centerY);
-        line(0, -h/2, 0, h/2);
-        line(0, 0, numberOfBuffer, 0);
-        
-        pushStyle();
-        stroke(255, 255, 0);
-        //noStroke();
-        strokeWeight(2);
-        for(int i=0; i<numberOfBuffer-1; i++){
-            line(i, constrain(map(buffer[i], min, max, h/2, -h/2), -h/2, h/2), i+1, constrain(map(buffer[i+1], min, max, h/2, -h/2), -h/2, h/2));
-            //ellipse(i, buffer[i], 2, 2);
-        }
+        translate(_x, _centerY - h/2);
+            //title
+            fill(255, 255, 0);
+            noStroke();
+            rect(0, 0, 100, 20);
+            fill(0);
+            // taextFont
+            textSize(12);
+            text(title + " : " + data, 10, 14);
+        popMatrix();
         popStyle();
         
-        popMatrix();
+        
+        pushStyle();
+            stroke(255, 255, 255);
+            noFill();
+            pushMatrix();
+                translate(_x, _centerY);
+                line(0, -h/2, 0, h/2);
+                line(0, 0, numberOfBuffer, 0);
+                
+                pushStyle();
+                    stroke(255, 255, 0);
+                    //noStroke();
+                    strokeWeight(2);
+                    for(int i=0; i<numberOfBuffer-1; i++){
+                        line(i, constrain(map(buffer[i], min, max, h/2, -h/2), -h/2, h/2), i+1, constrain(map(buffer[i+1], min, max, h/2, -h/2), -h/2, h/2));
+                        //ellipse(i, buffer[i], 2, 2);
+                    }
+                popStyle();
+            popMatrix();
         popStyle();
     }
 }

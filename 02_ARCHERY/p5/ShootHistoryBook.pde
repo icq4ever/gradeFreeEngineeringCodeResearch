@@ -18,4 +18,10 @@ class ShootHistoryBook{
 	}
 
     int getSizeOfRecord(){    return sizeOfRecord; };
+
+	void clear(){
+		history.clear();
+		timeStamp.clear();
+		sizeOfRecord = 0;
+	}
 }
