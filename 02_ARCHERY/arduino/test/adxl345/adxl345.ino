@@ -110,12 +110,12 @@ void displayRange(void)
 
 void setup(void) {
 	Serial.begin(115200);
-	Serial.println("Accelerometer Test"); Serial.println("");
+	// Serial.println("Accelerometer Test"); Serial.println("");
 
 	/* Initialise the sensor */
 	if(!accel.begin()) {
 		/* There was a problem detecting the ADXL345 ... check your connections */
-		Serial.println("Ooops, no ADXL345 detected ... Check your wiring!");
+		// Serial.println("Ooops, no ADXL345 detected ... Check your wiring!");
 		while(1);
 	}
 
@@ -123,7 +123,7 @@ void setup(void) {
 	// accel.setRange(ADXL345_RANGE_16_G);
 	// displaySetRange(ADXL345_RANGE_8_G);
 	// displaySetRange(ADXL345_RANGE_4_G);
-	displaySetRange(ADXL345_RANGE_2_G);
+	accel.setRange(ADXL345_RANGE_2_G);
 
 	/* Display some basic information on this sensor */
 	// displaySensorDetails();
@@ -151,5 +151,5 @@ void loop(void)
 	Serial.print(event.acceleration.z, 2);
 	Serial.println();
 
-	delay(20);
+	delay(50);
 }
