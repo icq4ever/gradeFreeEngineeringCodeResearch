@@ -16,7 +16,8 @@ class TimeTemplate {
 		second = 0;
 		milliSecond = 0;
 		
-		clockFont = loadFont("SFUIDisplay-Black-24.vlw");
+		// clockFont = loadFont("SFUIDisplay-Black-24.vlw");
+		clockFont = loadFont("ShareTechMono-Regular-24.vlw");
 	}
 
 	int getYear() 			{   return year;    }
@@ -25,7 +26,7 @@ class TimeTemplate {
 	int getHour() 			{	return hour;	}
 	int getMinute() 		{	return minute;	}
 	int getSecond() 		{	return second;	}
-	long getMilliSeconds()	{	return System.currentTimeMillis() % 100;	} // milliseconds 
+	long getMilliSeconds()	{	return System.currentTimeMillis() % 1000;	} // milliseconds 
 	
 	String getDateTime(){
 		String returnTime = getDateString() + " " + getClockString();
