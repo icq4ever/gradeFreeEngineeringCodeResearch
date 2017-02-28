@@ -12,7 +12,9 @@ float lastSensorX, lastSensorY, lastSensorZ;
 float deltaX, deltaY, deltaZ;
 float delta;
 
-boolean buttonState = false;
+PFont interfaceFont;
+
+// boolean buttonState = false;
 
 boolean cont;
 boolean bGraphOn;
@@ -37,10 +39,12 @@ static float stablizeThreshold = 0.4;
 
 
 void setup() {
-	size(1600,900);
+	size(1600,900, P3D);
 	frameRate(60);
 	clock = new TimeTemplate();
 	shootLog = new ShootHistoryBook();
+
+	interfaceFont = loadFont("ShareTechMono-Regular-24.vlw");
 
 	sensorX = 0;
 	sensorY = 0;
@@ -62,11 +66,12 @@ void setup() {
 
 	// port = new Serial(this, Serial.list()[0], 115200);
 	port = new Serial(this, "COM6", 115200);
-	port.bufferUntil('\n');
+	// port.bufferUntil('\n');
 
 	lastBlinkCheckTimer = millis();
 	bBlinkOn = true;
 	
+	textFont(interfaceFont, 24);
 }
 
 void draw() {
@@ -79,8 +84,6 @@ void draw() {
 	// }
 	
 	review();
-
-	
 	// gVis.draw(250, 200);
 	
 
@@ -117,24 +120,24 @@ void printShootLog(){
 			fill(255, 255, 0);
 			// text(shootLog.timeStamp.get(i), 40, 400+i*18);
 			
-			if(i<9)		text("0"+ Integer.toString(i+1), 40, 200+i*18);
-			else  		text(i+1, 40, 200+i*18);
+			if(i<9)		text("0"+ Integer.toString(i+1), 40, 200+i*24);
+			else  		text(i+1, 40, 200+i*24);
 			
 			
 			if(abs(shootLog.history.get(i).x) < stablizeThreshold)	fill(0, 255, 0);
 			else  													fill(255, 0, 0);
 			// text(shootLog.history.get(i).x, 240, 400+i*18);
-			text(shootLog.history.get(i).x, 100, 200+i*18);
+			text(shootLog.history.get(i).x, 100, 200+i*24);
 
 			if(abs(shootLog.history.get(i).y) < stablizeThreshold)	fill(0, 255, 0);
 			else  													fill(255, 0, 0);
 			// text(shootLog.history.get(i).y, 320, 400+i*18);
-			text(shootLog.history.get(i).y, 180, 200+i*18);
+			text(shootLog.history.get(i).y, 200, 200+i*24);
 
 			if(abs(shootLog.history.get(i).z) < stablizeThreshold)	fill(0, 255, 0);
 			else  													fill(255, 0, 0);
 			// text(shootLog.history.get(i).z, 400, 400+i*18);
-			text(shootLog.history.get(i).z, 260, 200+i*18);
+			text(shootLog.history.get(i).z, 300, 200+i*24);
 
 			popStyle();
 
@@ -173,7 +176,7 @@ void review(){
 void keyPressed() {
 	if (key == 'c' || key == 'C') {
 		cont = true;
-		port.write('1');
+		// port.write('1');
 	}
 
 	if(key == 'g' || key == 'G'){
@@ -187,25 +190,29 @@ void keyPressed() {
 
 // Serial Event
 void serialEvent(Serial port){
-	String inString = port.readStringUntil('\n');
-	
-	if(inString != null){
-		inString = trim(inString);
-		String[] values = inString.split(","); 
+	try{
+		String inString = port.readStringUntil('\n');
+		
+		if(inString != null){
+			inString = trim(inString);
+			String[] values = inString.split(","); 
 
-		lastSensorX = sensorX;
-		lastSensorY = sensorY;
-		lastSensorZ = sensorZ;
+			lastSensorX = sensorX;
+			lastSensorY = sensorY;
+			lastSensorZ = sensorZ;
 
-		sensorX = Float.parseFloat(values[0]);
-		sensorY = Float.parseFloat(values[1]);
-		sensorZ = Float.parseFloat(values[2]);
+			sensorX = Float.parseFloat(values[0]);
+			sensorY = Float.parseFloat(values[1]);
+			sensorZ = Float.parseFloat(values[2]);
 
-		deltaX = sensorX - lastSensorX;
-		deltaY = sensorY - lastSensorY;
-		deltaZ = sensorZ - lastSensorZ;
+			deltaX = sensorX - lastSensorX;
+			deltaY = sensorY - lastSensorY;
+			deltaZ = sensorZ - lastSensorZ;
 
-		delta = (abs(deltaX) + abs(deltaY) + abs(deltaZ)) / 3;
+			delta = (abs(deltaX) + abs(deltaY) + abs(deltaZ)) / 3;
+		}
+	} catch(RuntimeException e) {
+		// e.printStackTrace();
 	}
 }
 
@@ -235,8 +242,15 @@ void updateBG(){
 		ellipse(width/2, height/2, size, size);
 	}
 	
-	fill(0);
-	text(delta, 20, 20);
+	pushStyle();
+	fill(255);
+	textAlign(LEFT, TOP);
+	text(delta, 40, 40);
+
+	fill(255);
+	textAlign(RIGHT, TOP);
+	text(int(frameRate) + " fps", width-40, 40);
+	popStyle();
 }
 
 void exit(){
