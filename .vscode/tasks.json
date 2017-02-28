@@ -8,7 +8,7 @@
             "--force",
             "--sketch=${fileDirname}",
             "--output=${fileDirname}\\out",
-            "--present"
+            "--run"
         ]
     },
     "osx":{
