@@ -4,9 +4,7 @@
 #endif
 
 #define PIN 1
-
 #define NUM_LEDS 24
-
 #define BRIGHTNESS 100
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIN, NEO_GRBW + NEO_KHZ800);
