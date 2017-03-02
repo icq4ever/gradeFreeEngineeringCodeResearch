@@ -2,12 +2,11 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_ADXL345_U.h>
 
-/* Assign a unique ID to this sensor at the same time */
 Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
 
 
-void displaySensorDetails(void)
-{
+/* ========= ADXL345 codes ========================================== */
+void displaySensorDetails(void){
 	sensor_t sensor;
 	accel.getSensor(&sensor);
 	Serial.println("------------------------------------");
@@ -22,12 +21,10 @@ void displaySensorDetails(void)
 	delay(500);
 }
 
-void displayDataRate(void)
-{
+void displayDataRate(void){
 	Serial.print  ("Data Rate:    "); 
 
-	switch(accel.getDataRate())
-	{
+	switch(accel.getDataRate())	{
 		case ADXL345_DATARATE_3200_HZ:
 		Serial.print  ("3200 "); 
 		break;
@@ -83,8 +80,7 @@ void displayDataRate(void)
 	Serial.println(" Hz");  
 }
 
-void displayRange(void)
-{
+void displayRange(void){
 	Serial.print  ("Range:         +/- "); 
 
 	switch(accel.getRange())
@@ -107,6 +103,8 @@ void displayRange(void)
 	}  
 	Serial.println(" g");  
 }
+/* ================================================================== */
+
 
 void setup(void) {
 	Serial.begin(115200);
@@ -120,18 +118,11 @@ void setup(void) {
 	}
 
 	/* Set the range to whatever is appropriate for your project */
-	// accel.setRange(ADXL345_RANGE_16_G);
-	// displaySetRange(ADXL345_RANGE_8_G);
-	// displaySetRange(ADXL345_RANGE_4_G);
+	// 16, 8, 4, 2G available
 	accel.setRange(ADXL345_RANGE_2_G);
 
 	/* Display some basic information on this sensor */
 	// displaySensorDetails();
-
-	/* Display additional settings (outside the scope of sensor_t) */
-	// displayDataRate();
-	// displayRange();
-	// Serial.println("");
 }
 
 void loop(void) 
