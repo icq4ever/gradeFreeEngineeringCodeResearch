@@ -7,9 +7,8 @@ TwoDimensionGraph YVis;
 TwoDimensionGraph ZVis;
 float GFMin, GFMax;
 
-float sensorX, sensorY, sensorZ;
-float lastSensorX, lastSensorY, lastSensorZ;
 float deltaX, deltaY, deltaZ;
+float lastDeltaX, lastDeltaY, lastdeltaZ;
 float delta;
 
 PFont interfaceFont;
@@ -24,18 +23,16 @@ ShootHistoryBook shootLog;
 
 Serial port;
 
-float blinkTimer;
-float lastBlinkCheckTimer;
-boolean bBlinkOn;
-boolean bReviewOn;
 boolean bStablized = false;
 float lastStablizedTimer;
 float size;
 // todo : export to json for check lately
 
+int shootBtnStatus = 0;
+int lastShootBtnStatus = 0;
 int numberOfBuffer = 500;
 
-static float stablizeThreshold = 0.4;
+static float stablizeThreshold = 0.15;
 
 
 void setup() {
@@ -46,17 +43,10 @@ void setup() {
 
 	interfaceFont = loadFont("ShareTechMono-Regular-24.vlw");
 
-	sensorX = 0;
-	sensorY = 0;
-	sensorZ = 0;
-	lastSensorX = 0;
-	lastSensorY = 0;
-	lastSensorZ = 0;
-
 	GFMin = 256;
 	GFMax = 640;
 	// gVis = new GForceVis(300, 300, -10, 10, 4);
-	deltaVis = new GForceVis(600, 600, -20, 20, 5);
+	deltaVis = new GForceVis(600, 600, -10, 10, 8);
 	XVis = new TwoDimensionGraph("X-AXIS", 300, 200, -10, 10);
 	YVis = new TwoDimensionGraph("Y-AXIS", 300, 200, -10, 10);
 	ZVis = new TwoDimensionGraph("Z-AXIS", 300, 200, -10, 10);
@@ -67,9 +57,6 @@ void setup() {
 	// port = new Serial(this, Serial.list()[0], 115200);
 	port = new Serial(this, "COM6", 115200);
 	// port.bufferUntil('\n');
-
-	lastBlinkCheckTimer = millis();
-	bBlinkOn = true;
 	
 	textFont(interfaceFont, 24);
 }
@@ -79,7 +66,7 @@ void draw() {
 	updateBG();
 
 	// if (cont)    {
-	pushData(sensorX, sensorY, sensorZ);
+	pushData(deltaX, deltaY, deltaZ);
 	pushDeltaData(deltaX, deltaY, deltaZ);
 	// }
 	
@@ -197,17 +184,18 @@ void serialEvent(Serial port){
 			inString = trim(inString);
 			String[] values = inString.split(","); 
 
-			lastSensorX = sensorX;
-			lastSensorY = sensorY;
-			lastSensorZ = sensorZ;
+			deltaX = Float.parseFloat(values[0]);
+			deltaY = Float.parseFloat(values[1]);
+			deltaZ = Float.parseFloat(values[2]);
 
-			sensorX = Float.parseFloat(values[0]);
-			sensorY = Float.parseFloat(values[1]);
-			sensorZ = Float.parseFloat(values[2]);
+			lastShootBtnStatus = shootBtnStatus;
 
-			deltaX = sensorX - lastSensorX;
-			deltaY = sensorY - lastSensorY;
-			deltaZ = sensorZ - lastSensorZ;
+			if(values[3].equals("1"))	shootBtnStatus = 1;
+			else  						shootBtnStatus = 0;
+			
+			if(shootBtnStatus != lastShootBtnStatus && shootBtnStatus == 1 )	{
+				cont = true;
+			} 
 
 			delta = (abs(deltaX) + abs(deltaY) + abs(deltaZ)) / 3;
 		}
@@ -217,11 +205,9 @@ void serialEvent(Serial port){
 }
 
 void updateBG(){
-	// blinkTimer  = map(delta, 0, 5, 300, 1000);
-
 	if(delta>stablizeThreshold){
 		bStablized = false;
-		size = map(delta, 1.2, 10, 0, 600);
+		size = map(abs(delta), stablizeThreshold, 5, 50, 600);
 		fill(#FF0000);
 		noStroke();
 		ellipse(width/2, height/2, size, size);
