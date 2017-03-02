@@ -7,6 +7,8 @@
 #define PIN_SERVO 		11
 #define PIN_LED			13
 
+#define BUFFERSIZE		5
+
 Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
 Servo servo;
 bool shootSWStatus;
@@ -17,10 +19,18 @@ bool ready;
 double lastShootBTNActivatedTimer;
 double lastSentToP5Timer;
 
+float sensorXBuffer[BUFFERSIZE];
+float sensorYBuffer[BUFFERSIZE];
+float sensorZBuffer[BUFFERSIZE];
+
+float sensorXSum, sensorYSum, sensorZSum;
 float sensorX, sensorY, sensorZ;
 float lastSensorX, lastSensorY, lastSensorZ;
 float deltaX, deltaY, deltaZ;
 float delta;
+
+int shootBtnStatus;
+int bufferCount;
 unsigned int pos;
 
 /* ========= ADXL345 codes ========================================== */
@@ -134,6 +144,16 @@ void setup() {
 	lastShootSWStatus = false;
 	lastShootBTNActivatedTimer = -5000;
 	pos = 500;
+	bufferCount = 0;
+
+	shootBtnStatus = 0;
+
+	// init buffer
+	for(int i=0; i<BUFFERSIZE; i++){
+		sensorXBuffer[i] = 0;
+		sensorYBuffer[i] = 0;
+		sensorZBuffer[i] = 0;
+	}
 
 	/* Initialise the sensor */
 	if(!accel.begin()) {
@@ -147,7 +167,7 @@ void setup() {
 	accel.setRange(ADXL345_RANGE_2_G);
 
 	// trigger reset
-	servo.write(pos);
+	servo.write(90);
 	delay(200);
 	// servo.detach();
 
@@ -176,6 +196,7 @@ void loop() {
 		lastSentToP5Timer = millis();
 	}
 
+
 	// if(delta *100 < 0.6)		digitalWrite(PIN_LED, HIGH);
 	// else 						digitalWrite(PIN_LED, LOW);
 }
@@ -186,6 +207,7 @@ void shootControlling(){
 			pos++;
 			if(!servo.attached())	servo.attach(PIN_SERVO);
 			servo.write(130);
+			shootBtnStatus = 1;
 		} else {
 			servo.detach();
 		}
@@ -196,6 +218,7 @@ void shootControlling(){
 			pos--;
 			if(!servo.attached())	servo.attach(PIN_SERVO);
 			servo.write(90);
+			shootBtnStatus = 0;
 			// Serial.println("pos--");
 		} else {
 			servo.detach();
@@ -218,21 +241,30 @@ void getAcclData(){
 	lastSensorY = sensorY;
 	lastSensorZ = sensorZ;
 
-	sensorX = event.acceleration.x;
-	sensorY = event.acceleration.y;
-	sensorZ = event.acceleration.z;
+	sensorXSum = sensorXSum - sensorXBuffer[bufferCount];
+	sensorYSum = sensorYSum - sensorYBuffer[bufferCount];
+	sensorZSum = sensorZSum - sensorZBuffer[bufferCount];
+
+	sensorXBuffer[bufferCount] = event.acceleration.x;
+	sensorYBuffer[bufferCount] = event.acceleration.y;
+	sensorZBuffer[bufferCount] = event.acceleration.z;
+
+	sensorXSum = sensorXSum + sensorXBuffer[bufferCount];
+	sensorYSum = sensorYSum + sensorYBuffer[bufferCount];
+	sensorZSum = sensorZSum + sensorZBuffer[bufferCount];	
+
+	bufferCount++;
+	if(bufferCount >= BUFFERSIZE)	bufferCount = 0;
+
+	sensorX = sensorXSum/BUFFERSIZE;
+	sensorY = sensorYSum/BUFFERSIZE;
+	sensorZ = sensorZSum/BUFFERSIZE;
 
 	deltaX = sensorX - lastSensorX;
 	deltaY = sensorY - lastSensorY;
 	deltaZ = sensorZ - lastSensorZ;
 
 	delta = (abs(deltaX) + abs(deltaY) + abs(deltaZ));
-
-	// Serial.print(event.acceleration.x, 2);
-	// Serial.print(",");
-	// Serial.print(event.acceleration.y, 2);
-	// Serial.print(",");
-	// Serial.print(event.acceleration.z, 2);
 }
 
 void sendToP5(){
@@ -250,13 +282,13 @@ void sendToP5(){
 	// Serial.print(",");
 	// Serial.print(event.acceleration.z, 2);
 	
-	Serial.print(sensorX,2);
+	Serial.print(deltaX,2);
 	Serial.print(",\t");
-	Serial.print(sensorY, 2);
+	Serial.print(deltaY, 2);
 	Serial.print(",\t");
-	Serial.print(sensorZ, 2);
-	Serial.print(",\t");
-	Serial.print(delta, 2);
+	Serial.print(deltaZ, 2);
+	Serial.print(",");
+	Serial.print(shootBtnStatus);
 	// if()
 	Serial.println();
 }
