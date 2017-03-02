@@ -4,7 +4,7 @@
 
 #include <Servo.h>
 #define PIN_SHOOT_SW	6
-#define PIN_SERVO 		9
+#define PIN_SERVO 		11
 #define PIN_LED			13
 
 Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
@@ -16,6 +16,12 @@ bool shootingComplete;
 bool ready;
 double lastShootBTNActivatedTimer;
 double lastSentToP5Timer;
+
+float sensorX, sensorY, sensorZ;
+float lastSensorX, lastSensorY, lastSensorZ;
+float deltaX, deltaY, deltaZ;
+float delta;
+unsigned int pos;
 
 /* ========= ADXL345 codes ========================================== */
 void displaySensorDetails(){
@@ -121,11 +127,13 @@ void setup() {
 	servo.attach(PIN_SERVO);
 	pinMode(PIN_SHOOT_SW, INPUT_PULLUP);
 	pinMode(PIN_LED, OUTPUT);
+	// pinMode(PIN_SERVO, OUTPUT)''
 	Serial.begin(115200);
 
 	shootSWStatus = false;
 	lastShootSWStatus = false;
-	lastShootBTNActivatedTimer = millis();
+	lastShootBTNActivatedTimer = -5000;
+	pos = 500;
 
 	/* Initialise the sensor */
 	if(!accel.begin()) {
@@ -138,6 +146,11 @@ void setup() {
 	// 16, 8, 4, 2G available
 	accel.setRange(ADXL345_RANGE_2_G);
 
+	// trigger reset
+	servo.write(pos);
+	delay(200);
+	// servo.detach();
+
 	/* Display some basic information on this sensor */
 	// displaySensorDetails();
 }
@@ -145,7 +158,7 @@ void setup() {
 void loop() {
 	shootSWStatus = !digitalRead(PIN_SHOOT_SW);
 
-	if(!lastShootSWStatus && shootSWStatus){
+	if((!lastShootSWStatus && shootSWStatus) && (millis() - lastShootBTNActivatedTimer>5000)) {
 		// servo 130
 		// 3초간 오픈
 		lastShootBTNActivatedTimer = millis();
@@ -153,25 +166,46 @@ void loop() {
 	} 
 	lastShootSWStatus = shootSWStatus;
 
+	getAcclData();
 	shootControlling();
+
+	// Serial.println(pos);
 
 	if(millis() - lastSentToP5Timer > 10){
 		sendToP5();
 		lastSentToP5Timer = millis();
 	}
+
+	// if(delta *100 < 0.6)		digitalWrite(PIN_LED, HIGH);
+	// else 						digitalWrite(PIN_LED, LOW);
 }
 
 void shootControlling(){
-	if((millis() - lastShootBTNActivatedTimer < 3000) ){
-		servo.write(130);
+	if((millis() - lastShootBTNActivatedTimer < 3000)){
+		if(pos < 700)	{
+			pos++;
+			if(!servo.attached())	servo.attach(PIN_SERVO);
+			servo.write(130);
+		} else {
+			servo.detach();
+		}
+		// servo.write(130);
 		digitalWrite(PIN_LED, HIGH);
 	} else {
-		servo.write(90);
+		if(pos > 300){
+			pos--;
+			if(!servo.attached())	servo.attach(PIN_SERVO);
+			servo.write(90);
+			// Serial.println("pos--");
+		} else {
+			servo.detach();
+		}
+		// servo.write(90);
 		digitalWrite(PIN_LED, LOW);
 	}
 }
 
-void sendToP5(){
+void getAcclData(){
 	/* Get a new sensor event */ 
 	
 	// accX = event.acceleration.x;
@@ -180,12 +214,49 @@ void sendToP5(){
 	sensors_event_t event; 
 	accel.getEvent(&event);
 
-	Serial.print(event.acceleration.x, 2);
-	Serial.print(",");
-	Serial.print(event.acceleration.y, 2);
-	Serial.print(",");
-	Serial.print(event.acceleration.z, 2);
+	lastSensorX = sensorX;
+	lastSensorY = sensorY;
+	lastSensorZ = sensorZ;
+
+	sensorX = event.acceleration.x;
+	sensorY = event.acceleration.y;
+	sensorZ = event.acceleration.z;
+
+	deltaX = sensorX - lastSensorX;
+	deltaY = sensorY - lastSensorY;
+	deltaZ = sensorZ - lastSensorZ;
+
+	delta = (abs(deltaX) + abs(deltaY) + abs(deltaZ));
+
+	// Serial.print(event.acceleration.x, 2);
+	// Serial.print(",");
+	// Serial.print(event.acceleration.y, 2);
+	// Serial.print(",");
+	// Serial.print(event.acceleration.z, 2);
+}
+
+void sendToP5(){
+	/* Get a new sensor event */ 
 	
+	// accX = event.acceleration.x;
+	// accY = event.acceleration.y;
+	// accZ = event.acceleration.z;
+	// sensors_event_t event; 
+	// accel.getEvent(&event);
+
+	// Serial.print(event.acceleration.x, 2);
+	// Serial.print(",");
+	// Serial.print(event.acceleration.y, 2);
+	// Serial.print(",");
+	// Serial.print(event.acceleration.z, 2);
+	
+	Serial.print(sensorX,2);
+	Serial.print(",\t");
+	Serial.print(sensorY, 2);
+	Serial.print(",\t");
+	Serial.print(sensorZ, 2);
+	Serial.print(",\t");
+	Serial.print(delta, 2);
 	// if()
 	Serial.println();
 }
