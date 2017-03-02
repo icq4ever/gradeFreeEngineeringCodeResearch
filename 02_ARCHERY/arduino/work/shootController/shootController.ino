@@ -2,11 +2,23 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_ADXL345_U.h>
 
-Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
+#include <Servo.h>
+#define PIN_SHOOT_SW	6
+#define PIN_SERVO 		9
+#define PIN_LED			13
 
+Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
+Servo servo;
+bool shootSWStatus;
+bool lastShootSWStatus;
+
+bool shootingComplete;
+bool ready;
+double lastShootBTNActivatedTimer;
+double lastSentToP5Timer;
 
 /* ========= ADXL345 codes ========================================== */
-void displaySensorDetails(void){
+void displaySensorDetails(){
 	sensor_t sensor;
 	accel.getSensor(&sensor);
 	Serial.println("------------------------------------");
@@ -21,7 +33,7 @@ void displaySensorDetails(void){
 	delay(500);
 }
 
-void displayDataRate(void){
+void displayDataRate(){
 	Serial.print  ("Data Rate:    "); 
 
 	switch(accel.getDataRate())	{
@@ -80,7 +92,7 @@ void displayDataRate(void){
 	Serial.println(" Hz");  
 }
 
-void displayRange(void){
+void displayRange(){
 	Serial.print  ("Range:         +/- "); 
 
 	switch(accel.getRange())
@@ -105,10 +117,15 @@ void displayRange(void){
 }
 /* ================================================================== */
 
-
-void setup(void) {
+void setup() {
+	servo.attach(PIN_SERVO);
+	pinMode(PIN_SHOOT_SW, INPUT_PULLUP);
+	pinMode(PIN_LED, OUTPUT);
 	Serial.begin(115200);
-	// Serial.println("Accelerometer Test"); Serial.println("");
+
+	shootSWStatus = false;
+	lastShootSWStatus = false;
+	lastShootBTNActivatedTimer = millis();
 
 	/* Initialise the sensor */
 	if(!accel.begin()) {
@@ -125,22 +142,50 @@ void setup(void) {
 	// displaySensorDetails();
 }
 
-void loop(void) 
-{
-	/* Get a new sensor event */ 
-	sensors_event_t event; 
-	accel.getEvent(&event);
+void loop() {
+	shootSWStatus = !digitalRead(PIN_SHOOT_SW);
 
+	if(!lastShootSWStatus && shootSWStatus){
+		// servo 130
+		// 3초간 오픈
+		lastShootBTNActivatedTimer = millis();
+		Serial.println("shoot");
+	} 
+	lastShootSWStatus = shootSWStatus;
+
+	shootControlling();
+
+	if(millis() - lastSentToP5Timer > 10){
+		sendToP5();
+		lastSentToP5Timer = millis();
+	}
+}
+
+void shootControlling(){
+	if((millis() - lastShootBTNActivatedTimer < 3000) ){
+		servo.write(130);
+		digitalWrite(PIN_LED, HIGH);
+	} else {
+		servo.write(90);
+		digitalWrite(PIN_LED, LOW);
+	}
+}
+
+void sendToP5(){
+	/* Get a new sensor event */ 
+	
 	// accX = event.acceleration.x;
 	// accY = event.acceleration.y;
 	// accZ = event.acceleration.z;
+	sensors_event_t event; 
+	accel.getEvent(&event);
 
 	Serial.print(event.acceleration.x, 2);
 	Serial.print(",");
 	Serial.print(event.acceleration.y, 2);
 	Serial.print(",");
 	Serial.print(event.acceleration.z, 2);
+	
+	// if()
 	Serial.println();
-
-	delay(50);
 }
