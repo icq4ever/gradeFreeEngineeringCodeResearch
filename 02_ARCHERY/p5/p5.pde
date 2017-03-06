@@ -66,7 +66,7 @@ void draw() {
 	updateBG();
 
 	// if (cont)    {
-	pushData(deltaX, deltaY, deltaZ);
+	pushDataToXYZ2DGraph(deltaX, deltaY, deltaZ);
 	pushDeltaData(deltaX, deltaY, deltaZ);
 	// }
 	
@@ -91,7 +91,7 @@ void draw() {
 	deltaVis.draw(width/2, height/2);
 }
 
-void pushData(float _dataX, float _dataY, float _dataZ) {
+void pushDataToXYZ2DGraph(float _dataX, float _dataY, float _dataZ) {
 	PVector data = new PVector(_dataX, _dataY, _dataZ);
 	// gVis.pushData(data);
 	XVis.pushData(data.x);
