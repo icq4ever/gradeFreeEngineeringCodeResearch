@@ -206,7 +206,7 @@ void shootControlling(){
 		if(pos < 700)	{
 			pos++;
 			if(!servo.attached())	servo.attach(PIN_SERVO);
-			servo.write(130);
+			servo.write(110);
 			shootBtnStatus = 1;
 		} else {
 			servo.detach();
