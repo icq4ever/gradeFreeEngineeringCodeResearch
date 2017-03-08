@@ -4,14 +4,17 @@
 
 #include <Servo.h>
 #define PIN_SHOOT_SW	6
+#define PIN_SAFE_SW		12
 #define PIN_SERVO 		11
 #define PIN_LED			13
+
 
 #define BUFFERSIZE		5
 
 Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
 Servo servo;
 bool shootSWStatus;
+bool safeSWStatus;
 bool lastShootSWStatus;
 
 bool shootingComplete;
@@ -136,11 +139,13 @@ void displayRange(){
 void setup() {
 	servo.attach(PIN_SERVO);
 	pinMode(PIN_SHOOT_SW, INPUT_PULLUP);
+	pinMode(PIN_SAFE_SW, INPUT_PULLUP);
 	pinMode(PIN_LED, OUTPUT);
 	// pinMode(PIN_SERVO, OUTPUT)''
 	Serial.begin(115200);
 
 	shootSWStatus = false;
+	safeSWStatus = false;
 	lastShootSWStatus = false;
 	lastShootBTNActivatedTimer = -5000;
 	pos = 500;
@@ -177,8 +182,9 @@ void setup() {
 
 void loop() {
 	shootSWStatus = !digitalRead(PIN_SHOOT_SW);
+	safeSWStatus = !digitalRead(PIN_SAFE_SW);
 
-	if((!lastShootSWStatus && shootSWStatus) && (millis() - lastShootBTNActivatedTimer>5000)) {
+	if((!lastShootSWStatus && shootSWStatus) && (millis() - lastShootBTNActivatedTimer>5000) && safeSWStatus) {
 		// servo 130
 		// 3초간 오픈
 		lastShootBTNActivatedTimer = millis();
@@ -202,7 +208,8 @@ void loop() {
 }
 
 void shootControlling(){
-	if((millis() - lastShootBTNActivatedTimer < 3000)){
+	if(millis() - lastShootBTNActivatedTimer < 3000){
+		// SHOOT
 		if(pos < 700)	{
 			pos++;
 			if(!servo.attached())	servo.attach(PIN_SERVO);
@@ -214,6 +221,7 @@ void shootControlling(){
 		// servo.write(130);
 		digitalWrite(PIN_LED, HIGH);
 	} else {
+		// RELEASE
 		if(pos > 300){
 			pos--;
 			if(!servo.attached())	servo.attach(PIN_SERVO);
