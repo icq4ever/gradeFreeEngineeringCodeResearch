@@ -1,4 +1,15 @@
 import processing.serial.*;
+import ddf.minim.*;
+import ddf.minim.ugens.*;
+import controlP5.*;
+
+Minim minim;
+AudioPlayer shortBeep;
+AudioOutput out;
+Oscil wave;
+
+ControlP5 cp5;
+Slider sliderThreshold;
 
 // GForceVis gVis;
 GForceVis deltaVis;
@@ -32,12 +43,33 @@ int shootBtnStatus = 0;
 int lastShootBtnStatus = 0;
 int numberOfBuffer = 500;
 
-static float stablizeThreshold = 0.15;
+static float stablizeThreshold = 0.25;
 
 
 void setup() {
 	size(1600,900, P3D);
 	frameRate(60);
+
+	// wave.setFrequency(1160);
+	// wave.setAmplitude(0.8);
+	
+
+	minim = new Minim(this);
+	// load sound beep files
+	shortBeep = minim.loadFile("shortBeep.wav");
+	// longBeep = minim.loadFile("longBeep.wav");
+
+	out = minim.getLineOut();
+	// originally frequency = 1170
+	wave = new Oscil(880, 0.6f, Waves.SINE);
+
+	wave.patch(out);
+
+	cp5 = new ControlP5(this);
+	sliderThreshold = cp5.addSlider("stablizeThreshold")
+						.setPosition(40, height-120)
+						.setRange(0.1, 5);
+
 	clock = new TimeTemplate();
 	shootLog = new ShootHistoryBook();
 
@@ -89,6 +121,32 @@ void draw() {
 	printShootLog();
 
 	deltaVis.draw(width/2, height/2);
+
+	// if short/long beep is playing.. 
+	// no isplayin method.
+	if(bStablized){
+		if(shortBeep.isPlaying())	{
+			shortBeep.pause();
+		}
+		wave.setAmplitude(0.8f);
+		// if(!longBeep.isPlaying())	{
+			// longBeep.rewind();
+			// longBeep.play();
+		// }
+	} else {
+		// if(longBeep.isPlaying())	{
+			// longBeep.pause();
+		// }
+		wave.setAmplitude(0.f);
+		
+		// wave.setWaveform(Waves.SINE);
+		if(!shortBeep.isPlaying())	{
+			shortBeep.rewind();
+			shortBeep.loop();
+		}
+	}
+// 
+	// println(bStablized);
 }
 
 void pushDataToXYZ2DGraph(float _dataX, float _dataY, float _dataZ) {
@@ -212,6 +270,7 @@ void updateBG(){
 		noStroke();
 		ellipse(width/2, height/2, size, size);
 		size = 0;
+
 	} else {
 		if(!bStablized)		{
 			lastStablizedTimer = millis();
