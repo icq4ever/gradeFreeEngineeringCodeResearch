@@ -249,6 +249,30 @@ void getAcclData(){
 	lastSensorY = sensorY;
 	lastSensorZ = sensorZ;
 
+	sensorX = event.acceleration.x;
+	sensorY = event.acceleration.y;
+	sensorZ = event.acceleration.z;
+
+	deltaX = sensorX - lastSensorX;
+	deltaY = sensorY - lastSensorY;
+	deltaZ = sensorZ - lastSensorZ;
+
+	delta = (abs(deltaX) + abs(deltaY) + abs(deltaZ));
+}
+
+void getAcclDataSmoothed(){
+	/* Get a new sensor event */ 
+	
+	// accX = event.acceleration.x;
+	// accY = event.acceleration.y;
+	// accZ = event.acceleration.z;
+	sensors_event_t event; 
+	accel.getEvent(&event);
+
+	lastSensorX = sensorX;
+	lastSensorY = sensorY;
+	lastSensorZ = sensorZ;
+
 	sensorXSum = sensorXSum - sensorXBuffer[bufferCount];
 	sensorYSum = sensorYSum - sensorYBuffer[bufferCount];
 	sensorZSum = sensorZSum - sensorZBuffer[bufferCount];
