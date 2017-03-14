@@ -3,10 +3,15 @@
 #include <Adafruit_ADXL345_U.h>
 
 #include <Servo.h>
+
+// pin definition
 #define PIN_SHOOT_SW	6
 #define PIN_SAFE_SW		12
 #define PIN_SERVO 		11
 #define PIN_LED			13
+
+#define PIN_LED_GREEN	A3
+#define PIN_LED_RED		A2
 
 
 #define BUFFERSIZE		5
@@ -21,6 +26,8 @@ bool shootingComplete;
 bool ready;
 double lastShootBTNActivatedTimer;
 double lastSentToP5Timer;
+
+char stablizedMessage;
 
 float sensorXBuffer[BUFFERSIZE];
 float sensorYBuffer[BUFFERSIZE];
@@ -141,9 +148,12 @@ void setup() {
 	pinMode(PIN_SHOOT_SW, INPUT_PULLUP);
 	pinMode(PIN_SAFE_SW, INPUT_PULLUP);
 	pinMode(PIN_LED, OUTPUT);
-	// pinMode(PIN_SERVO, OUTPUT)''
+	
+	pinMode(PIN_LED_GREEN, OUTPUT);
+	pinMode(PIN_LED_RED, OUTPUT);
 	Serial.begin(115200);
 
+	stablizedMessage = '0';
 	shootSWStatus = false;
 	safeSWStatus = false;
 	lastShootSWStatus = false;
@@ -202,9 +212,26 @@ void loop() {
 		lastSentToP5Timer = millis();
 	}
 
+	controlLed();
+}
 
-	// if(delta *100 < 0.6)		digitalWrite(PIN_LED, HIGH);
-	// else 						digitalWrite(PIN_LED, LOW);
+// read message from arduino && control led
+void controlLed(){
+	// get message from p5
+	if(Serial.available()){
+		stablizedMessage = Serial.read();
+	}
+
+	if(stablizedMessage == '1')	{
+		digitalWrite(PIN_LED_GREEN, HIGH);
+		digitalWrite(PIN_LED_RED, LOW);
+	} else if(stablizedMessage == '0') {
+		digitalWrite(PIN_LED_GREEN, LOW);
+		digitalWrite(PIN_LED_RED, HIGH);
+	} else {
+		digitalWrite(PIN_LED_GREEN, LOW);
+		digitalWrite(PIN_LED_RED, LOW);
+	}
 }
 
 void shootControlling(){
