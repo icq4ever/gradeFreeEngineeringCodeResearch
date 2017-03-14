@@ -124,12 +124,14 @@ void draw() {
 			shortBeep.pause();
 		}
 		wave.setAmplitude(0.8f);
+		port.write('1');
 	} else {
 		wave.setAmplitude(0.f);
 		if(!shortBeep.isPlaying())	{
 			shortBeep.rewind();
 			shortBeep.loop();
 		}
+		port.write('0');
 	}
 }
 
