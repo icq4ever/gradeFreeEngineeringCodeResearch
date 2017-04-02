@@ -13,6 +13,8 @@
 #include <Adafruit_SSD1325.h>
 #include <Adafruit_GPS.h>
 
+// GPS info demo trigger
+#define DEMO 0
 
 #define FONT_W	6
 #define FONT_H	8
@@ -45,6 +47,8 @@ uint32_t timer = millis();
 String latitude;
 String longitude;
 String altitude;
+String hdop_info;
+int fixQ;
 
 static const unsigned char PROGMEM logo16_glcd_bmp[] = 
 { B00000000, B11000000,
@@ -107,8 +111,7 @@ void setup()   {
 	display.begin();
 	// init done
 
-	display.display(); // show splashscreen
-	delay(1000);
+	// display.display(); // show splashscreen
 	display.clearDisplay();   // clears the screen and buffer
 
 	display.setRotation(0);
@@ -154,6 +157,7 @@ void loop() {
 	    Serial.println(GPS.year, DEC);
 	    Serial.print("Fix: "); Serial.print((int)GPS.fix);
 	    Serial.print(" quality: "); Serial.println((int)GPS.fixquality);
+	    fixQ = (int)GPS.fixquality;
 	    if (GPS.fix) {
 
 	    	// debug
@@ -168,6 +172,7 @@ void loop() {
 
 			latitude = " " + String(GPS.latitude/100, 6) + " " + GPS.lat;
 			longitude = String(GPS.longitude/100, 6) + " " + GPS.lon;
+			hdop_info = "HDOP : " + String(GPS.HDOP, 2);
 
 
 			if((int)GPS.fixquality > 1)	altitude = String(GPS.altitude) + " M" ;
@@ -177,9 +182,22 @@ void loop() {
 			latitude = "-";
 			longitude = "-";
 			altitude = "-";
+			hdop_info = "HDOP : - ";
 		}
+
+
+		if(DEMO != 0){
+			latitude = " 37.334126 N";
+			longitude = "126.541500 E";
+			altitude = "33.60 M";
+			hdop_info = "HDOP : 0.90";
+			fixQ = 2;
+		}
+
 		drawGPSInformation();
 	}
+
+	
 	
 }
 
@@ -234,17 +252,47 @@ void drawGPSInformation(){
 	display.setTextWrap(false);
 	display.setTextColor(WHITE);
 
-	display.setCursor(FONT_W*3, FONT_H * 2);
+	// display resolution : 128 * 64
+	switch(fixQ){
+		case 0:
+			// display.clearDisplay();
+			display.drawPixel(0, display.height()-1, WHITE);
+			// display.display();
+			break;
+		case 1:
+			// display.clearDisplay();
+			display.drawPixel(0, display.height()-1, WHITE);
+			display.drawPixel(2, display.height()-1, WHITE);
+			// display.display();
+			break;
+		case 2:
+			// display.clearDisplay();
+			display.drawPixel(0, display.height()-1, WHITE);
+			display.drawPixel(2, display.height()-1, WHITE);
+			display.drawPixel(4, display.height()-1, WHITE);
+			// display.display();
+			break;
+		default:
+			break;
+	}
+
+	display.setCursor(FONT_W *10, FONT_H * 7);
+	for(int i=0; i<hdop_info.length(); i++){
+		display.write(hdop_info.charAt(i));
+	}
+	
+
+	display.setCursor(FONT_W*3, FONT_H * 1);
 	for(int i=0; i<latitude.length(); i++){
 		display.write(latitude.charAt(i));
 	}
 
-	display.setCursor(FONT_W*3, FONT_H*4);
+	display.setCursor(FONT_W*3, FONT_H * 3);
 	for(int i=0; i<latitude.length(); i++){
 		display.write(longitude.charAt(i));
 	}
 
-	display.setCursor(FONT_W*3 , FONT_H*6);
+	display.setCursor(FONT_W*3, FONT_H * 5);
 	for(int i=0; i<latitude.length(); i++){
 		display.write(altitude.charAt(i));
 	}	
