@@ -120,13 +120,13 @@ void setup(){
     buttonPressTime[0] = moment;
     buttonPressTime[1] = moment;
     buttonPressTime[2] = moment;
-    buttonPressTime[3] = sPress;
-    buttonPressTime[4] = sPress;
+    buttonPressTime[3] = moment;    // sPress -> moment
+    buttonPressTime[4] = moment;
     buttonPressTime[5] = moment;
     buttonPressTime[6] = moment;
-    buttonPressTime[7] = sPress;
-    buttonPressTime[8] = sPress;
-    buttonPressTime[9] = sPress;
+    buttonPressTime[7] = moment;
+    buttonPressTime[8] = moment;
+    buttonPressTime[9] = moment;
 
 
     initLoRa();
