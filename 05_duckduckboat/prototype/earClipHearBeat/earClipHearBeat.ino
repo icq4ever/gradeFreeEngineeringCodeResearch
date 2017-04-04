@@ -1,58 +1,74 @@
-/******************** (C) COPYRIGHT 2011 Seeedstudio ********************
-* File Name          : Heart rate sensor.pde
-* Author             : Seeedteam
-* Version            : V1.0
-* Date               : 30/12/2011
-* Description        : This program can be used to measure heart rate, 
-					   the lowest pulse in the program be set to 30.
-*************************************************************************/
-
-unsigned char pin = 13;
-unsigned char counter=0;
-unsigned int heart_rate=0;
-unsigned long temp[21];
-unsigned long sub=0;
-volatile unsigned char state = LOW;
+/****************************************************************************/	
+//	Function: This program can be used to measure heart rate, the lowest
+//			  pulse in the program be set to 30.Use an external interrupt 
+//			  to measure it.
+//	Hardware: Grove - Ear-clip Heart Rate Sensor, Grove - Base Shield, 
+//			  Grove - LED
+//	Arduino IDE: Arduino-1.0
+//	Author:	 FrankieChu		
+//	Date: 	 Jan 22, 2013
+//	Version: v1.0
+//	by www.seeedstudio.com
+//
+//  This library is free software; you can redistribute it and/or
+//  modify it under the terms of the GNU Lesser General Public
+//  License as published by the Free Software Foundation; either
+//  version 2.1 of the License, or (at your option) any later version.
+//
+//  This library is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//  Lesser General Public License for more details.
+//
+//  You should have received a copy of the GNU Lesser General Public
+//  License along with this library; if not, write to the Free Software
+//  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+//
+/******************************************************************************/
+#define LED 13					//indicator, Grove - LED is connected with D4 of Arduino
+boolean led_state = LOW;		//state of LED, each time an external interrupt 
+								//will change the state of LED
+unsigned char counter;
+unsigned long temp[7];
+unsigned long sub;
 bool data_effect=true;
-const int max_heartpluse_duty=2000;//you can change it follow your system's request.2000 meams 2 seconds, heart rate is 60/2. System return error if the duty overtrip 2 second.
+unsigned int heart_rate;//the measurement result of heart rate
 
-void setup(){
-	pinMode(pin, OUTPUT);
+const int max_heartpluse_duty = 2000;//you can change it follow your system's request.
+						//2000 meams 2 seconds. System return error 
+						//if the duty overtrip 2 second.
+void setup() {
+	pinMode(LED, OUTPUT);
 	Serial.begin(9600);
-	Serial.println("Please press the sensor with your finger.");
-	delay(5000);//wait finger press ready
-	array_init();
+	Serial.println("Please ready your chest belt.");
+	delay(5000);
+	arrayInit();
 	Serial.println("Heart rate test begin.");
 	attachInterrupt(digitalPinToInterrupt(0), interrupt, RISING);//set interrupt 0,digital port 2
 }
 
-void loop(){
-	digitalWrite(pin, state);
-  //digitalWrite(12,HIGH);
-  //delay(2000);
-  //digitalWrite(12,LOW);
-  //delay(2000);  
+void loop() {
+	digitalWrite(LED, led_state);//Update the state of the indicator
 }
-
-
-void sum() {//calculate the heart rate
-
-	if(data_effect){
-		heart_rate=1200000/(temp[20]-temp[0]);//60*20*1000/20_total_time 
-		Serial.print("Heart_rate_is:\t");
-		Serial.println(heart_rate);
-	}
+/*Function: calculate the heart rate*/
+void sum() {
+ if(data_effect)     {
+      heart_rate=360000/(temp[6]-temp[0]);//60*20*1000/20_total_time 
+      Serial.print("Heart_rate_is:\t");
+      Serial.println(heart_rate);
+    }
    data_effect=1;//sign bit
 }
 
-void interrupt(){
-	temp[counter]=millis(); //get sys time
-	state = !state;    //change LED status
+/*Function: Interrupt service routine.Get the sigal from the external interrupt*/
+void interrupt()
+{
+    temp[counter]=millis();
 	Serial.println(counter,DEC);
-	Serial.println(temp[counter]);
-	switch(counter)	{
-		case(0):
-			sub=temp[counter]-temp[20];
+    Serial.println(temp[counter]);
+    switch(counter) {
+		case 0:
+			sub=temp[counter]-temp[6];
 			Serial.println(sub);
 			break;
 		default:
@@ -61,29 +77,33 @@ void interrupt(){
 			break;
 	}
 
-	if(sub>max_heartpluse_duty) {//set 2 seconds as max heart pluse duty
+    if(sub>max_heartpluse_duty) {//set 2 seconds as max heart pluse duty
 		data_effect=0;//sign bit
 		counter=0;
 		Serial.println("Heart rate measure error,test will restart!" );
-		array_init();
+		arrayInit();
 	}
 
-	if (counter==20&&data_effect){
+    if (counter==6&&data_effect){
 		counter=0;
 		sum();
-	} else if(counter!=20&&data_effect){
-		counter++;
-	} else {
+    }
+
+    else if(counter!=6&&data_effect){
+    	counter++;
+    	led_state = !led_state;
+    }
+    else {
 		counter=0;
 		data_effect=1;
-	}
+    }
+    
 }
 
-void array_init() {
-	for(unsigned char i=0;i!=20;++i) {
+/*Function: Initialization for the array(temp)*/
+void arrayInit() {
+	for(unsigned char i=0;i < 6;i ++) {
 		temp[i]=0;
-	}	
-	temp[20]=millis();
+	}
+	temp[6]=millis();
 }
-
-
