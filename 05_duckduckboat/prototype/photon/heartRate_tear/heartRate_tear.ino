@@ -1,5 +1,15 @@
+/*
+    TODO : 
+
+    [ ] : fix pulse read failed -> heartRate makes 0
+    [V] : tear detect
+*/
+
 #define LED     D7                  //indicator, Grove - LED is connected with D4 of Arduino
 #define ISRPIN  D2
+
+#define VOUTPIN A0
+#define INPIN   D1
 
 #include "simple-OSC.h"
 
@@ -10,7 +20,9 @@ unsigned int outPort = 8000;
 
 
 bool bPulseWorking = false;
-volatile bool ledState = LOW;       
+volatile bool ledState = LOW;   
+
+int iTearOn = 0;
 
 unsigned int counter;
 unsigned long temp[7];
@@ -43,6 +55,11 @@ void setup() {
     Particle.publish("myLocalIP", message);
     
     pinMode(LED, OUTPUT);
+    
+    pinMode(VOUTPIN, OUTPUT);
+    pinMode(INPIN, INPUT);
+    digitalWrite(VOUTPIN, HIGH);
+    
     delay(5000);
     arrayInit();
     Particle.publish("LOG", "heartRate test begin...");
@@ -58,13 +75,21 @@ void loop() {
         Particle.publish("HeartRate", intToString(heartRate));
         
         // publish heartRate via OSC 
-        OSCMessage outMessage("/heartRate/demo");
+        OSCMessage outMessage("/demo/heartRate");
         outMessage.addInt(heartRate);
         outMessage.send(udp,outIP,outPort);
         lastPublishedTimer = millis();
     }
     
+    if(digitalRead(INPIN)){
+        iTearOn = 1;
+    } else {
+        iTearOn = 0;
+    }
     
+    OSCMessage outMessage("/demo/tear");
+    outMessage.addInt(iTearOn);
+    outMessage.send(udp, outIP, outPort);
 }
 
 void getHeartRate(){
@@ -86,6 +111,7 @@ void interrupt(){
     if(sub > maxHeartRatePulseDuty){
         dataOK = false;
         counter = 0;
+        heartRate = 0;                      // interrupt should be occur for this check routine!!! 
         arrayInit();
     } 
     
@@ -103,7 +129,6 @@ void interrupt(){
 }
 
 void arrayInit(){
-    heartRate = 0;
     for(int i=0; i<6; i++){
         temp[i] = 0;
         temp[6] = millis();
