@@ -1,7 +1,7 @@
 /*
     TODO : 
 
-    [ ] : fix pulse read failed -> heartRate makes 0
+    [V] : fix pulse read failed -> heartRate makes 0
     [V] : tear detect
 */
 
@@ -19,7 +19,6 @@ IPAddress outIP(192, 168, 100, 103);
 unsigned int outPort = 8000;
 
 
-bool bPulseWorking = false;
 volatile bool ledState = LOW;   
 
 int iTearOn = 0;
@@ -30,12 +29,13 @@ unsigned long sub;
 bool dataOK = true;
 
 unsigned int heartRate=0;
-unsigned long lastPublishedTimer = 0;
+unsigned long lastPublishedTimer;
+unsigned long lastHeartRateCheckedTimer;
 const long maxHeartRatePulseDuty = 2000;
 
 void setup() {
     // static IP setting
-    IPAddress myAddress(192, 168, 100, 101);            // 102 : donghoon MBP
+    IPAddress myAddress(192, 168, 100, 101);           
     IPAddress netmask(255, 255, 255, 0);
     IPAddress gateway(192, 168, 100, 1);
     IPAddress dns(8,8,8,8);
@@ -65,12 +65,17 @@ void setup() {
     Particle.publish("LOG", "heartRate test begin...");
     attachInterrupt(ISRPIN, interrupt, RISING);
     
-    lastPublishedTimer = millis();
+    lastHeartRateCheckedTimer = lastPublishedTimer = millis();
 }
 
 void loop() {
     digitalWrite(LED, ledState);//Update the state of the indicator
     
+    // check pulseOK 
+    if(millis() - lastHeartRateCheckedTimer > 3000)     heartRate = 0;
+    
+    
+    // osc publish : heartRate
     if(millis() - lastPublishedTimer > 2000){
         Particle.publish("HeartRate", intToString(heartRate));
         
@@ -81,12 +86,14 @@ void loop() {
         lastPublishedTimer = millis();
     }
     
+    // teardrop check
     if(digitalRead(INPIN)){
         iTearOn = 1;
     } else {
         iTearOn = 0;
     }
     
+    // osc publish : teardrop
     OSCMessage outMessage("/demo/tear");
     outMessage.addInt(iTearOn);
     outMessage.send(udp, outIP, outPort);
@@ -96,6 +103,7 @@ void getHeartRate(){
     if(dataOK){
         heartRate = 360000 / (temp[6] - temp[0]);
     } 
+    lastHeartRateCheckedTimer = millis();
 }
 
 void interrupt(){
