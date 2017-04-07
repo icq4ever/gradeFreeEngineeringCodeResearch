@@ -9,7 +9,7 @@
 #define ISRPIN  D2
 
 #define VOUTPIN A0
-#define INPIN   D1
+#define INPIN   D4
 
 #include "simple-OSC.h"
 
