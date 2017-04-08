@@ -25,10 +25,11 @@
 #include "Adafruit_LEDBackpack.h"
 
 
-bool bUpdateSegmentReady = false;
+bool bUpdateSegmentReady = false;						// flag var for prevent master/slave conflicts
 byte getBuffer[2];
 
-Adafruit_7segment matrix = Adafruit_7segment();
+// join as slave ID  8
+Adafruit_7segment matrix = Adafruit_7segment();		// modified LEDbackpack library. check "Adafruit_LEDBackpack.cpp line:204"
 
 int heartRate;
 
@@ -41,10 +42,10 @@ void setup() {
 	Serial.begin(115200);
 	Serial.println("7 Segment Backpack Test");
 	Serial.println("=======================");
-	matrix.begin(0x70);							// I2C address
+	matrix.begin(8, 0x70);							// set slave ID / I2C address
 
 	// join I2C
-	// Wire.begin(8);				// join I2C as slave ID 8
+	// Wire.begin(8);				// this is moved to Adafruit_7segment constructor
 	Wire.onReceive(receiveEvent);
 
 	heartRate = 0;
@@ -55,67 +56,30 @@ void receiveEvent(int howMany){
 	int HIGHint = Wire.read();
 	
 	heartRate = LOWint + HIGHint * 256;
-	bUpdateSegmentReady = true;
+	bUpdateSegmentReady = true;						// flag on!						
 	// Serial.println(heartRate);
 }
 
 void loop() {
 	// try to print a number thats too long
-	if(bUpdateSegmentReady){
+	if(bUpdateSegmentReady){						// GUI update when flag on!!
 		if(heartRate != 0){
 			matrix.print(heartRate, DEC);
 			matrix.writeDisplay();
 		} else {
-			matrix.writeDigitNum(0, 8);
-			matrix.writeDigitNum(1, 8);
-			matrix.writeDigitNum(3, 8);
-			matrix.writeDigitNum(4, 8);
+			matrix.writeDigitNum(0, 0);
+			matrix.writeDigitNum(1, 0);
+			matrix.writeDigitNum(3, 0);
+			matrix.writeDigitNum(4, 0);
+
+			// matrix.print('-', 0);
+			// matrix.print('-', 1);
+			// matrix.print('-', 2);
+			// matrix.print('-', 3);
 			matrix.writeDisplay();
 		}
-		bUpdateSegmentReady = false;
+		bUpdateSegmentReady = false;				// flag off
 	}
 
 	delay(100);
-
-	// Serial.println(getMessage);
-	
-
-	// print a hex number
-	// matrix.print(0xBEEF, HEX);
-	// matrix.writeDisplay();
-	// delay(500);
-
-	// print a floating point 
-	// matrix.print(12.34);
-	// matrix.writeDisplay();
-	// delay(500);
-
-	// print with print/println
-	// for (uint16_t counter = 0; counter < 9999; counter++) {
-	// 	matrix.println(counter);
-	// 	matrix.writeDisplay();
-	// 	delay(10);
-	// }
-
-	// method #2 - draw each digit
-	// uint16_t blinkcounter = 0;
-	// boolean drawDots = false;
-	// for (uint16_t counter = 0; counter < 9999; counter ++) {
-	// 	matrix.writeDigitNum(0, (counter / 1000), drawDots);
-	// 	matrix.writeDigitNum(1, (counter / 100) % 10, drawDots);
-	// 	matrix.drawColon(drawDots);
-	// 	matrix.writeDigitNum(3, (counter / 10) % 10, drawDots);
-	// 	matrix.writeDigitNum(4, counter % 10, drawDots);
-
-	// 	blinkcounter+=50;
-	// 	if (blinkcounter < 500) {
-	// 		drawDots = false;
-	// 	} else if (blinkcounter < 1000) {
-	// 		drawDots = true;
-	// 	} else {
-	// 		blinkcounter = 0;
-	// 	}
-	// 	matrix.writeDisplay();
-	// 	delay(10);
-	// }
 }
