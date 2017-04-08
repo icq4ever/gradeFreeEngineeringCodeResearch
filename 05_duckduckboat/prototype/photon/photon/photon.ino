@@ -8,10 +8,11 @@
 #define LED             D7      //indicator, Grove - LED is connected with D4 of Arduino
 #define ISRPIN          D2      // hearRate exInterrupt pin
 
-#define VOUTPIN         A0      // voltage out to tear sensor
-#define INPIN           D4      // tear sensor input
+// #define VOUTPIN         A0      // voltage out to tear sensor
+#define TEAR_PIN           D4      // tear sensor input
 
 #define FSR_INPUT_PIN   A1      // fsr sensor input
+#define WHISPER_PIN     A2      // whisper sensor input
 
 #include "simple-OSC.h"
 
@@ -29,6 +30,7 @@ unsigned int counter;
 unsigned long temp[7];
 unsigned long sub;
 unsigned int fsrRead;
+unsigned int whisperRead;
 bool dataOK = true;
 
 char sendBuffer[3];
@@ -60,10 +62,7 @@ void setup() {
     Particle.publish("myLocalIP", message);
 
     pinMode(LED, OUTPUT);
-
-    pinMode(VOUTPIN, OUTPUT);
-    pinMode(INPIN, INPUT);
-    digitalWrite(VOUTPIN, HIGH);
+    pinMode(TEAR_PIN, INPUT);
 
     delay(5000);
     arrayInit();
@@ -106,11 +105,13 @@ void loop() {
     }
     
     // teardrop check
-    if(digitalRead(INPIN)){
+    if(digitalRead(TEAR_PIN)){
         iTearOn = 1;
     } else {
         iTearOn = 0;
     }
+    
+    whisperRead = analogRead(A2);
     
     // osc publish : teardrop
     OSCMessage tearMessage("/demo/tear");
@@ -119,7 +120,11 @@ void loop() {
 
     OSCMessage fsrMessage("/demo/fsr");
     fsrMessage.addInt(fsrRead);
-    fsrMessage.send(udp, outIP, outPort);    
+    fsrMessage.send(udp, outIP, outPort);   
+    
+    OSCMessage whisperMessage("/demo/whisper");
+    whisperMessage.addInt(whisperRead);
+    whisperMessage.send(udp, outIP, outPort);
 }
 
 void getHeartRate(){
