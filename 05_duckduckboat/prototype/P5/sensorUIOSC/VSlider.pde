@@ -35,13 +35,15 @@ class VSlider {
     }
 
     // update slider value
-    void update(float _inputValue) {
+    boolean update(float _inputValue) {
         rawValue = (int)_inputValue;
         normalizedValue = constrain(map(_inputValue, min, max, 0, 1), 0, 1);
         sliderHeight = map(normalizedValue, 0, 1, 0, h);
         
         if(rawValue > threshold)    bImpact = true;
         else                        bImpact = false;
+        
+        return bImpact;
     }
 
     // draw slider. 
@@ -73,7 +75,7 @@ class VSlider {
             textFont(interfaceFont, 80);
             textAlign(RIGHT, BOTTOM);
             fill(#FFFF00);
-            if (lastHeartRate == 0) {
+            if (rawValue == 0) {
                 text("--", 260, 265);
             } else {
                 text(rawValue, 260, 265);

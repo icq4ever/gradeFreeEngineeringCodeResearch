@@ -15,8 +15,9 @@ class DigitalUI{
         debugFont = loadFont("Monospaced-12.vlw");
     }
     
-    void update(boolean _isOn){
+    boolean update(boolean _isOn){
         bOn = _isOn;
+        return bOn;
     }
     
     void draw(float _x, float _y){
