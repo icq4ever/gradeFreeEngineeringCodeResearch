@@ -73,7 +73,8 @@ void setup() {
     lastHeartRateCheckedTimer = lastPublishedTimer = millis();
 
     // I2C setting
-    Wire.begin();   // join i2c bus as master
+    // deprecated..
+    // Wire.begin();   // join i2c bus as master
 
 }
 
@@ -95,10 +96,11 @@ void loop() {
         outMessage.send(udp,outIP,outPort);
 
         //send to feather.. 
-        Wire.beginTransmission(8);
-        Wire.write(lowByte(heartRate));
-        Wire.write(highByte(heartRate));
-        Wire.endTransmission();
+        // deprecated..
+        // Wire.beginTransmission(8);
+        // Wire.write(lowByte(heartRate));
+        // Wire.write(highByte(heartRate));
+        // Wire.endTransmission();
 
         lastPublishedTimer = millis();
     }
