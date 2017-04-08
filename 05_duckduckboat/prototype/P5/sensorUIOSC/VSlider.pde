@@ -8,42 +8,57 @@ class VSlider {
     float normalizedValue;        // normalized value (0 ~ 1);
     float sliderHeight;
     int   rawValue;
-    boolean bImpact;
+    boolean bOn;
     String title;
     
-    float threshold;
+    float lowThreshold;
+    float highThreshold;
 
     PFont interfaceFont;
     PFont debugFont;
+    
+    int controlType;
 
     // _min  : min value of input
     // _max  : max value of output
     // _w    : width of slider
     // _h    : height of slider
-    VSlider(String _title,  float _min, float _max, float _threshold) {
+    VSlider(String _title,  float _min, float _max, float _highThreshold, int _controlType) {
         title = _title;
         min = _min;
         max = _max;
         w = 30;
         h = 200;
         rawValue = 0;
-        threshold = _threshold;
+        highThreshold = _highThreshold;
+        
+        controlType = _controlType;
 
         // UI font setting
         interfaceFont = loadFont("FiraSans-Regular-80.vlw");    
         debugFont = loadFont("Monospaced-14.vlw");
     }
+    
+    void setLowThreshold(float _lowThreshold){
+        lowThreshold = _lowThreshold;
+    }
 
     // update slider value
     boolean update(float _inputValue) {
         rawValue = (int)_inputValue;
+        if(rawValue <= min)    rawValue = 0;
         normalizedValue = constrain(map(_inputValue, min, max, 0, 1), 0, 1);
         sliderHeight = map(normalizedValue, 0, 1, 0, h);
         
-        if(rawValue > threshold)    bImpact = true;
-        else                        bImpact = false;
+        if(controlType == 0){
+            if(rawValue > highThreshold)    bOn = true;
+            else                        bOn = false;
+        } else if(controlType == 1){    // middle
+            if(lowThreshold < rawValue && rawValue < highThreshold)    bOn = true;
+            else                                                       bOn = false; 
+        }
         
-        return bImpact;
+        return bOn;
     }
 
     // draw slider. 
@@ -57,7 +72,7 @@ class VSlider {
             // slider 
             pushStyle();
             
-            if(bImpact)    fill(#FF0000);
+            if(bOn)    fill(#FF0000);
             else           fill(#00e227);
             
             noStroke();
@@ -75,7 +90,7 @@ class VSlider {
             textFont(interfaceFont, 80);
             textAlign(RIGHT, BOTTOM);
             fill(#FFFF00);
-            if (rawValue == 0) {
+            if (rawValue <= 0) {
                 text("--", 260, 265);
             } else {
                 text(rawValue, 260, 265);
