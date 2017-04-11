@@ -26,11 +26,14 @@ int status_led = 13;
 char radiopacket[20] ={0};
 int getMessageFromP5;
 
+int bCupIsEmpty = 1;
+int handInHandRate = 0;
+int bHandOn = 0;
 
 
-void setup() 
-{
+void setup() {
   pinMode(13, OUTPUT);
+  pinMode(A5, INPUT);        // drinking AMBASA
 
   pinMode(RFM95_RST, OUTPUT);
   digitalWrite(RFM95_RST, HIGH);
@@ -43,7 +46,7 @@ void setup()
   Serial.begin(9600);
   delay(100);
 
-  Serial.println("Feather LoRa TX Test!");
+  // Serial.println("Feather LoRa TX Test!");
 
   // manual reset
   digitalWrite(RFM95_RST, LOW);
@@ -52,17 +55,17 @@ void setup()
   delay(10);
 
   while (!rf95.init()) {
-    Serial.println("LoRa radio init failed");
+    // Serial.println("LoRa radio init failed");
     while (1);
   }
-  Serial.println("LoRa radio init OK!");
+  // Serial.println("LoRa radio init OK!");
 
   // Defaults after init are 434.0MHz, modulation GFSK_Rb250Fd250, +13dbM
   if (!rf95.setFrequency(RF95_FREQ)) {
-    Serial.println("setFrequency failed");
+    // Serial.println("setFrequency failed");
     while (1);
   }
-  Serial.print("Set Freq to: "); Serial.println(RF95_FREQ);
+  // Serial.print("Set Freq to: "); Serial.println(RF95_FREQ);
   
   // Defaults after init are 434.0MHz, 13dBm, Bw = 125 kHz, Cr = 4/5, Sf = 128chips/symbol, CRC on
 
@@ -78,39 +81,49 @@ int16_t packetnum = 0;  // packet counter, we increment per xmission
 
 void loop()
 {
+  if(digitalRead(A5)) bCupIsEmpty = 0;
+  else                bCupIsEmpty = 1;
+
+  handInHandRate = analogRead(A1);
+  if(handInHandRate > 200)  bHandOn = 1;
+  else                      bHandOn = 0;
+
 
   // read message from processing via P5
   if(Serial.available()){
     getMessageFromP5 = Serial.read();
+    if(getMessageFromP5 == 'f'){
+      sendMsg('F');
+      // Serial.println("F!");
+      // digitalWrite(13, HIGH);
+      // delay(2000);
+    }
+
+    if(getMessageFromP5 == 'b'){
+      sendMsg('B');
+      // Serial.println("B!");
+      // digitalWrite(13, LOW);
+      // delay(2000);
+    }
+
+    if(getMessageFromP5 == 'l'){ 
+      sendMsg('L');
+      // Serial.println("L!");
+      // digitalWrite(13, HIGH);
+      // delay(2000);
+    }
+
+    if(getMessageFromP5 == 'r'){ 
+      sendMsg('R');
+      // Serial.println("R!");
+      // digitalWrite(13, LOW);
+      // delay(2000);
+    }
   }
 
-  if(getMessageFromP5 == 'f'){
-    sendMsg('F');
-    // Serial.println("F!");
-    // digitalWrite(13, HIGH);
-    delay(2000);
-  }
+  
 
-  if(getMessageFromP5 == 'b'){
-    sendMsg('B');
-    // Serial.println("B!");
-    // digitalWrite(13, LOW);
-    delay(2000);
-  }
-
-  if(getMessageFromP5 == 'l'){ 
-    sendMsg('L');
-    // Serial.println("L!");
-    // digitalWrite(13, HIGH);
-    delay(2000);
-  }
-
-  if(getMessageFromP5 == 'r'){ 
-    sendMsg('R');
-    // Serial.println("R!");
-    // digitalWrite(13, LOW);
-    delay(2000);
-  }
+  sendToP5();
 }
 
 void sendMsg(char m)
@@ -126,7 +139,15 @@ void sendMsg(char m)
   delay(10);
   rf95.send((uint8_t *)radiopacket, 2);
 
-  Serial.println("Waiting for packet to complete..."); 
+  // Serial.println("Waiting for packet to complete..."); 
   delay(10);
   
+}
+
+// send to P5
+void sendToP5(){
+  Serial.print(bCupIsEmpty);
+  Serial.print(",");
+  Serial.print(bHandOn);
+  Serial.println();
 }
