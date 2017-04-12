@@ -9,23 +9,15 @@
 
 
 #include "simple-OSC.h"
-SYSTEM_MODE(SEMI_AUTOMATIC);
+SYSTEM_MODE(MANUAL);
 
 UDP udp;
 IPAddress outIP(192, 168, 100, 102);
-unsigned int outPort = 8008;
+unsigned int outPort = 8000;
 
 unsigned int millisCounter;
 unsigned int lastLEDToggleTimer;
 bool bLEDMode = false;
-
-
-// STARTUP(semiAutomaticSetting());
-// setup() runs once, when the device is first turned on.
-// 
-// void semiAutomaticSetting(){
-
-// }
 
 
 void setup() {
@@ -34,36 +26,29 @@ void setup() {
 	Serial.begin(115200);
 
 	// static IP setting
-    IPAddress myAddress(192, 168, 100, 101);           
-    IPAddress netmask(255, 255, 255, 0);
-    IPAddress gateway(192, 168, 100, 1);
-    IPAddress dns(192, 168, 100, 1);
-    WiFi.setStaticIP(myAddress, netmask, gateway, dns);
+    // IPAddress myAddress(192, 168, 100, 101);           
+    // IPAddress netmask(255, 255, 255, 0);
+    // IPAddress gateway(192, 168, 100, 1);
+    // IPAddress dns(192, 168, 100, 1);
+    // WiFi.setStaticIP(myAddress, netmask, gateway, dns);
 
-    WiFi.useStaticIP();
+    // WiFi.useStaticIP();
 
 
     WiFi.connect();
     while(!WiFi.ready()){
-    	Particle.process();
+    	Particle.process();		// 
     	delay(100);
 	}
-
-	WiFi.ping(WiFi.gatewayIP());
+	Particle.process();			// ================================ must!!!!!!
+	
 
 	if(WiFi.ready()){	// flashing 10 times
-		for(int i=0; i<10; i++){
-    		digitalWrite(D7, HIGH);
-    		delay(100);
-    		digitalWrite(D7, LOW);	
-    		delay(100);
-    	}
+		digitalWrite(D7, HIGH);
 	}
     
 	udp.begin(8001);
 
-    millisCounter = millis();
-    lastLEDToggleTimer = millis();
     Serial.print("local IP: \t");
     Serial.println(WiFi.localIP());
 
@@ -72,24 +57,64 @@ void setup() {
 
 // loop() runs over and over again, as quickly as it can execute.
 void loop() {
-  // The core of your code will likely live here.
-	// millisCounter = millis();
+	// check ping to 
+	Serial.println("OSC MESSAGE START!");
+	OSCMessage message("/nemo");
+	message.addFloat(1.23);
+	message.send(udp, outIP, outPort);
+	delay(500);
+	Serial.println("OSC MESSAGE END!");
 
-	if (millis() - lastLEDToggleTimer > 200){
-		bLEDMode = !bLEDMode;
-		lastLEDToggleTimer = millis();
-		millisCounter ++;
+	if(WiFi.ready()){
+		digitalWrite(D7, HIGH);
+	} else {
+		udp.endPacket();
+		udp.stop();
+		digitalWrite(D7, LOW);
+		
+		WiFi.disconnect();
+
+		// IPAddress myAddress(192, 168, 100, 101);           
+	 //    IPAddress netmask(255, 255, 255, 0);
+	 //    IPAddress gateway(192, 168, 100, 1);
+	 //    IPAddress dns(192, 168, 100, 1);
+	 //    WiFi.setStaticIP(myAddress, netmask, gateway, dns);
+
+	 //    WiFi.useStaticIP();
+		WiFi.off();
+		delay(5000);
+		WiFi.on();
+
+		WiFi.connect();
+		Serial.print("connecting");
+		while(WiFi.connecting()){
+			Serial.print("waiting connection... ");
+			delay(1000);
+		}
 		Serial.println();
-		Serial.print("counter : \t");
-		Serial.println(millisCounter);
 
-		WiFi.ping(WiFi.gatewayIP());
+		while(!WiFi.ready()){
+			Particle.process();	
+			Serial.print(".");
+    		delay(100);
+    	}
+    	Particle.process();
 
-		OSCMessage message("/demo/millis");
-		message.addInt(300);
-		message.send(udp, outIP, outPort);
-		Serial.print(".");
+
+    	Serial.println();
+    	Serial.println("WiFi fully ready.");
+
+    	Particle.process();
+    	Serial.print("PING returns : ");
+    	Serial.println(WiFi.ping(WiFi.gatewayIP()));
+
+
+    	Serial.println("========");
+    	Serial.print("local IP: \t");
+    	Serial.println(WiFi.localIP());
+
+    	delay(5000);
+       	udp.begin(8001);	//
 	}
 
-	digitalWrite(D7, bLEDMode);
 }
