@@ -34,6 +34,10 @@ int LED=13;
 #define SERVOMIDDLE 308 // 4096 * (1.5 /20)
 #define SERVOMAX 410 // 4096 * (2 / 20)
 
+unsigned long lastLeftCmdTimer;
+unsigned long lastRightCmdTimer;
+unsigned int servoAngle = SERVOMIDDLE;
+
 void setup() {
 	pinMode(LED, OUTPUT);     
 	pinMode(RFM95_RST, OUTPUT);
@@ -79,6 +83,7 @@ void setup() {
 	rf95.setTxPower(23, false);
 
 
+	lastLeftCmdTimer = lastRightCmdTimer = millis();
 }
 
 void loop() {
@@ -110,25 +115,32 @@ void loop() {
 					delay(200);
 					break;
 
-					case 'L':
-					digitalWrite(LED, HIGH);
-					servo.setPWM(1,0,SERVOMAX);
-					delay(200);
-					digitalWrite(LED, LOW);
-					servo.setPWM(1,0,SERVOMIDDLE);
-					delay(200);
+					case 'L':		
+					lastLeftCmdTimer = millis();
 					break;
+
+					// digitalWrite(LED, HIGH);
+					// servo.setPWM(1,0,SERVOMAX);
+					// delay(200);
+					// digitalWrite(LED, LOW);
+					// servo.setPWM(1,0,SERVOMIDDLE);
+					// delay(200);
+					// break;
 
 					case 'R':
-					digitalWrite(LED, HIGH);
-					servo.setPWM(1,0,SERVOMIN);
-					delay(200);
-					digitalWrite(LED, LOW);
-					servo.setPWM(1,0,SERVOMIDDLE);
-					delay(200);
+					lastRightCmdTimer = millis();
 					break;
+					
+					// digitalWrite(LED, HIGH);
+					// servo.setPWM(1,0,SERVOMIN);
+					// delay(200);
+					// digitalWrite(LED, LOW);
+					// servo.setPWM(1,0,SERVOMIDDLE);
+					// delay(200);
+					// break;
 
 					default:
+
 					break;
 
 				}
@@ -139,4 +151,34 @@ void loop() {
 			Serial.println("Receive failed");
 		}
 	}
+	handling();
+}
+
+void handling(){
+	if(lastLeftCmdTimer > lastRightCmdTimer){
+		if(millis() - lastLeftCmdTimer < 200){
+			// turn left
+			servoAngle ++;
+			servo.setPWM(1, 0, servoAngle);
+			if(servoAngle > SERVOMAX)	servoAngle = SERVOMAX;
+		} else {
+			servoAngle --;
+			servo.setPWM(1, 0, servoAngle);
+			if(servoAngle < SERVOMIDDLE)	servoAngle = SERVOMIDDLE;
+		}
+	} else {
+		if(millis() - lastRightCmdTimer < 200){
+			// turn right
+			servoAngle --;
+			servo.setPWM(1, 0, servoAngle);
+			if(servoAngle < SERVOMIN)	servoAngle = SERVOMIN;
+		} else {
+			servoAngle ++;
+			servo.setPWM(1, 0, servoAngle);
+			if(servoAngle > SERVOMIDDLE)	servoAngle = SERVOMIDDLE;
+		}
+	}
+	
+
+	
 }
