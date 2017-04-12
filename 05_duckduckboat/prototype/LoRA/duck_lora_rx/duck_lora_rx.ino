@@ -155,24 +155,25 @@ void loop() {
 }
 
 void handling(){
-	if(lastLeftCmdTimer > lastRightCmdTimer){
+	// check which command is the lastest?
+	if(lastLeftCmdTimer > lastRightCmdTimer){	// left is last command
 		if(millis() - lastLeftCmdTimer < 200){
 			// turn left
 			servoAngle ++;
 			servo.setPWM(1, 0, servoAngle);
 			if(servoAngle > SERVOMAX)	servoAngle = SERVOMAX;
-		} else {
+		} else { // back to middle
 			servoAngle --;
 			servo.setPWM(1, 0, servoAngle);
 			if(servoAngle < SERVOMIDDLE)	servoAngle = SERVOMIDDLE;
 		}
-	} else {
+	} else {	// right is the last command
 		if(millis() - lastRightCmdTimer < 200){
 			// turn right
 			servoAngle --;
 			servo.setPWM(1, 0, servoAngle);
 			if(servoAngle < SERVOMIN)	servoAngle = SERVOMIN;
-		} else {
+		} else { // back to middle
 			servoAngle ++;
 			servo.setPWM(1, 0, servoAngle);
 			if(servoAngle > SERVOMIDDLE)	servoAngle = SERVOMIDDLE;
