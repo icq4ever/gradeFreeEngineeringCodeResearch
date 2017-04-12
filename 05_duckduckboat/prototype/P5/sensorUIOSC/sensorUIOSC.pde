@@ -55,9 +55,9 @@ void setup() {
 
     oscP5 = new OscP5(this, 8000);
     
-    //for(int i=0; i<Serial.list().length; i++){
-    //    println(Serial.list()[i]);
-    //}
+    for(int i=0; i<Serial.list().length; i++){
+        println(Serial.list()[i]);
+    }
     
     feather = new Serial(this, Serial.list()[2], 9600);
     feather.bufferUntil('\n');
@@ -188,7 +188,7 @@ void serialEvent(Serial port){
             //inString = trim(inString);
             
             //String [] items = split(inString, ',');
-            println(inString);
+            //println(inString);
             
             if(inString.equals("C")){
                 bCutieOn = true;
