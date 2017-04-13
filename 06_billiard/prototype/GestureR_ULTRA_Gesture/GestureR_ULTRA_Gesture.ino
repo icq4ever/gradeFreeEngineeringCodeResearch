@@ -4,12 +4,10 @@
 PCA9685 ledDriver; 
 
 unsigned short num;
-short raw_data[5]={
-	0, };
+short raw_data[5]={ 0, };
 	short sub_os_data[5];
 	signed short ret;
-	short act_os_d[4]={
-		0x03FF, 0x03FF, 0x03FF, 0x03FF};
+	short act_os_d[4]={ 0x03FF, 0x03FF, 0x03FF, 0x03FF};
 
 	/////////////// Constant parameters ///////
 	const int 	STATE_ONE 	 		= 1;
@@ -371,6 +369,24 @@ void RGB_LED() {
 	}
 }
 
+unsigned short RGBG_Cnt  = 0;
+unsigned short RGBG_Cnt2 = 0;
+boolean RGBG_Plus = true;
+void RGB_LED_GREEN_DIMMING(int _maxBrightness){
+	if(RGBG_Plus)	RGBG_Cnt++;
+	else 			RGBG_Cnt--;
+
+	ledDriver.setLEDDimmed(0, RGBG_Cnt);
+	// ledDriver.setLedDimmed(1, RGB_Cnt*2);
+	// ledDriver.setLedDimmed(2, RGB_Cnt*2);
+
+	if(RGBG_Cnt>= _maxBrightness){
+		RGBG_Plus = false;
+	} else if(RGBG_Cnt<1){
+		RGBG_Plus = true;
+	}
+}
+
 const unsigned int delay_value=250;
 
 void LED_Blink() {
@@ -500,7 +516,7 @@ void loop() {
 		}
 	}
 
-	  //// Active offset calibration ////
+	//// Active offset calibration ////
 	if(st_gs.active_osc_on == 1){
 		getActiveOffset(&raw_data[0], &act_os_d[0], &st_gs);
 
@@ -621,7 +637,8 @@ void loop() {
 	}
 
 	/////Flashing RGB Led
-	RGB_LED();
+	// RGB_LED(); 
+	RGB_LED_GREEN_DIMMING(20);
 
 
 	delay(10);
