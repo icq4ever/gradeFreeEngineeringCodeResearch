@@ -423,6 +423,8 @@ void setup() {
 	pinMode(PIN_BURST, INPUT_PULLUP);
 	pinMode(PIN_LOCK, INPUT_PULLUP);
 
+	gigitalWrite(PIN_SOLENOID, LOW);
+
 
   	////////IO Init
 	pinMode(12, INPUT_PULLUP);  
@@ -481,9 +483,7 @@ void loop() {
 
 	// if locked && burst button Pressed!
 	if(bLock && bBurstBtnOn){
-		digitalWrite(PIN_SOLENOID, HIGH);
-	} else {
-		digitalWrite(PIN_SOLENOID, LOW);
+		burstMode();
 	}
 
 
@@ -671,6 +671,7 @@ void loop() {
 			
 			default:
 				Serial.println("Low");
+				shoot();								//////////////////// shoot!
 				break;
 		}
 
@@ -683,4 +684,19 @@ void loop() {
 
 
 	delay(10);
+}
+
+
+void burstMode(){
+	digitalWrite(PIN_SOLENOID, HIGH);
+	delay(100);
+	digitalWrite(PIN_SOLENOID, LOW);
+	delay(100);
+}
+
+void shoot(){
+	digitalWrite(PIN_SOLENOID, HIGH);
+	delay(1000);
+	digitalWrite(PIN_SOLENOID, LOW);
+	delay(1000);
 }
