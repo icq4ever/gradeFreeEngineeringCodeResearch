@@ -5,31 +5,31 @@
 #define PIN_LOCK		A1
 #define PIN_BURST		A2
 
-boolean bLock 		= true;
-boolean bBurstBtnOn = false;
+bool bLock 		= true;
+bool bBurstBtnOn = false;
 
 PCA9685 ledDriver; 
 
 unsigned short num;
 short raw_data[5]={ 0, };
-	short sub_os_data[5];
-	signed short ret;
-	short act_os_d[4]={ 0x03FF, 0x03FF, 0x03FF, 0x03FF};
+short sub_os_data[5];
+signed short ret;
+short act_os_d[4]={ 0x03FF, 0x03FF, 0x03FF, 0x03FF};
 
-	/////////////// Constant parameters ///////
-	const int 	STATE_ONE 	 		= 1;
-	const int 	STATE_TWO 	    	= 2;
-	const int 	STATE_THREE 		= 3;
-	const short OVER_FLOW_DATA 		= 4095;
-	const int 	DIR_RIGHT 			= 0x8;
-	const int 	DIR_LEFT			= 0x4;
-	const int 	DIR_TOP 			= 0x2;
-	const int 	DIR_BOTTOM			= 0x1;
-	const int 	SPEED_HIGH			= 0x2;
-	const int 	SPEED_MID			= 0x1;
+/////////////// Constant parameters ///////
+const int 	STATE_ONE 	 		= 1;
+const int 	STATE_TWO 	    	= 2;
+const int 	STATE_THREE 		= 3;
+const short OVER_FLOW_DATA 		= 4095;
+const int 	DIR_RIGHT 			= 0x8;
+const int 	DIR_LEFT			= 0x4;
+const int 	DIR_TOP 			= 0x2;
+const int 	DIR_BOTTOM			= 0x1;
+const int 	SPEED_HIGH			= 0x2;
+const int 	SPEED_MID			= 0x1;
 
-	const int 	COUNTS_HIGH_SP		= 6;        //Edit this value for tuning sensitivity of high speed sensing
-	const int 	COUNTS_MID_SP		= 10;       //Edit this value for tuning sensitivity of medium speed sensing
+const int 	COUNTS_HIGH_SP		= 6;        //Edit this value for tuning sensitivity of high speed sensing
+const int 	COUNTS_MID_SP		= 10;       //Edit this value for tuning sensitivity of medium speed sensing
 
 struct gs_params{
 	//// Temporal parameters for Direction Judgement ////
@@ -360,7 +360,7 @@ void I2C_write(unsigned char add,unsigned char reg,unsigned char data) {
 
 unsigned short RGB_Cnt=0;
 unsigned short RGB_Cnt2=0;
-boolean RGB_Plus=true;
+bool RGB_Plus=true;
 void RGB_LED() {
 	if (RGB_Plus) 	RGB_Cnt++;
 	else 			RGB_Cnt--; 
@@ -378,7 +378,7 @@ void RGB_LED() {
 /// WORKING INDICATOR GREEN LED DIMMING ///
 unsigned short RGBG_Cnt  = 0;
 unsigned short RGBG_Cnt2 = 0;
-boolean RGBG_Plus = true;
+bool RGBG_Plus = true;
 void RGB_LED_GREEN_DIMMING(int _maxBrightness){
 	if(RGBG_Plus)	RGBG_Cnt++;
 	else 			RGBG_Cnt--;
@@ -391,6 +391,23 @@ void RGB_LED_GREEN_DIMMING(int _maxBrightness){
 		RGBG_Plus = false;
 	} else if(RGBG_Cnt<1){
 		RGBG_Plus = true;
+	}
+}
+
+/// WORKING INDICATOR GREEN LED DIMMING ///
+unsigned short RGBR_Cnt  = 0;
+unsigned short RGBR_Cnt2 = 0;
+bool RGBR_Plus = true;
+void RGB_LED_RED_DIMMING(int _maxBrightness){
+	if(RGBR_Plus)	RGBR_Cnt++;
+	else 			RGBR_Cnt--;
+
+	ledDriver.setLEDDimmed(1, RGBR_Cnt);
+	
+	if(RGBR_Cnt>= _maxBrightness){
+		RGBR_Plus = false;
+	} else if(RGBR_Cnt<1){
+		RGBR_Plus = true;
 	}
 }
 
@@ -423,7 +440,7 @@ void setup() {
 	pinMode(PIN_BURST, INPUT_PULLUP);
 	pinMode(PIN_LOCK, INPUT_PULLUP);
 
-	gigitalWrite(PIN_SOLENOID, LOW);
+	digitalWrite(PIN_SOLENOID, LOW);
 
 
   	////////IO Init
@@ -465,7 +482,7 @@ void setup() {
 void loop() {
 	// button check
 	if(!digitalRead(PIN_LOCK))		{
-		Serial.println("PIN LOCKED!");
+		// Serial.println("PIN LOCKED!");
 		bLock = true;
 		delay(10);
 	} else {
@@ -473,7 +490,7 @@ void loop() {
 	}
 
 	if(!digitalRead(PIN_BURST))		{
-		Serial.println("BURST ON!");
+		// Serial.println("BURST ON!");
 		bBurstBtnOn = true;
 		delay(10);
 	} else {
@@ -482,9 +499,10 @@ void loop() {
 
 
 	// if locked && burst button Pressed!
-	if(bLock && bBurstBtnOn){
-		burstMode();
-	}
+	// if(!bLock){
+		if(bBurstBtnOn)		digitalWrite(PIN_SOLENOID, HIGH);
+		else 				digitalWrite(PIN_SOLENOID, LOW);
+	// }
 
 
 
@@ -590,21 +608,21 @@ void loop() {
 	}
 
 	if (ret&0x01) {
-		Serial.print("Bottom, ");
+		// Serial.print("Bottom, ");
 		switch (ret&0xF0) {
 			case 0x20:
 				ledDriver.setLEDOn(11);  
 				ledDriver.setLEDOn(10); 
-				Serial.println("High");
+				// Serial.println("High");
 				break;  
 			
 			case 0x10:
 				ledDriver.setLEDOn(10); 
-				Serial.println("Mid");
+				// Serial.println("Mid");
 				break;  
 			
 			default:
-				Serial.println("Low");
+				// Serial.println("Low");
 				break;
 		}
 
@@ -612,21 +630,21 @@ void loop() {
 	}
 
 	if (ret&0x02) {
-		Serial.print("Top,    ");
+		// Serial.print("Top,    ");
 		switch (ret&0xF0) {
 			case 0x20:
 				ledDriver.setLEDOn(3);  
 				ledDriver.setLEDOn(4); 
-				Serial.println("High");
+				// Serial.println("High");
 				break;  
 			
 			case 0x10:
 				ledDriver.setLEDOn(4);
-				Serial.println("Mid"); 
+				// Serial.println("Mid"); 
 				break;  
 			
 			default:
-				Serial.println("Low");
+				// Serial.println("Low");
 				break;
 		}
 
@@ -634,21 +652,21 @@ void loop() {
 	}
 
 	if (ret&0x04) {
-		Serial.print("Left,   ");
+		// Serial.print("Left,   ");
 		switch (ret&0xF0) {
 			case 0x20:
 				ledDriver.setLEDOn(6);  
 				ledDriver.setLEDOn(7); 
-				Serial.println("High");
+				// Serial.println("High");
 				break;  
 			
 			case 0x10:
 				ledDriver.setLEDOn(7); 
-				Serial.println("Mid");
+				// Serial.println("Mid");
 				break;  
 			
 			default:
-				Serial.println("Low");
+				// Serial.println("Low");
 				break;
 		}
 
@@ -656,22 +674,25 @@ void loop() {
 	}
 
 	if (ret&0x08) {
-		Serial.print("Right,  ");
+		if(!bLock)	 shoot();								//////////////////// shoot!
+		else		 digitalWrite(PIN_SOLENOID, LOW);
+
+		// Serial.print("Right,  ");
 		switch (ret&0xF0) {
 			case 0x20:
 				ledDriver.setLEDOn(12);  
 				ledDriver.setLEDOn(13);
-				Serial.println("High"); 
+				// Serial.println("High"); 
 				break;  
 			
 			case 0x10:
 				ledDriver.setLEDOn(13); 
-				Serial.println("Mid");
+				// Serial.println("Mid");
 				break;  
 			
 			default:
-				Serial.println("Low");
-				shoot();								//////////////////// shoot!
+				// Serial.println("Low");
+				
 				break;
 		}
 
@@ -680,19 +701,20 @@ void loop() {
 
 	/////Flashing RGB Led
 	// RGB_LED(); 
-	RGB_LED_GREEN_DIMMING(20);
+	if(!bLock)	 {	// unlock
+		RGB_LED_RED_DIMMING(10);
+		ledDriver.setLEDDimmed(0, 0);
+	} else 		 {	// lock
+		RGB_LED_GREEN_DIMMING(30);
+		ledDriver.setLEDDimmed(1, 0);
+	}
+
 
 
 	delay(10);
 }
 
 
-void burstMode(){
-	digitalWrite(PIN_SOLENOID, HIGH);
-	delay(100);
-	digitalWrite(PIN_SOLENOID, LOW);
-	delay(100);
-}
 
 void shoot(){
 	digitalWrite(PIN_SOLENOID, HIGH);
