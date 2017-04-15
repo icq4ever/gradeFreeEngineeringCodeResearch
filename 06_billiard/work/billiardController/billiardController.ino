@@ -4,9 +4,15 @@
 #define PIN_SOLENOID	A0
 #define PIN_LOCK		A1
 #define PIN_BURST		A2
+#define PIN_SETTING		7
 
 bool bLock 		= true;
 bool bBurstBtnOn = false;
+bool bSettingBtnOn = false;
+bool bLastSettingBtnOn = false;
+bool bModeDisplayOn = false;
+
+int mode = 0;
 
 PCA9685 ledDriver; 
 
@@ -426,6 +432,19 @@ void LED_Blink() {
 	delay(delay_value); 
 }
 
+void LED_BlinkShort() {
+	unsigned char i;
+	for(i=3; i<15; i++)  {
+		ledDriver.setLEDOn(i); 
+	}
+	delay(100);
+
+	for(i=3; i<15; i++)  {
+		ledDriver.setLEDOff(i); 
+	}
+	delay(100); 
+}
+
 void LED_Off() {
 	unsigned char i;
 	for(i=3; i<15; i++)  {
@@ -497,10 +516,23 @@ void loop() {
 		bBurstBtnOn = false;
 	}
 
+	if(!digitalRead(PIN_SETTING))	bSettingBtnOn = true;
+	else 							bSettingBtnOn = false;
+
+	if(!bLastSettingBtnOn && bSettingBtnOn){
+		mode++;
+		if(mode >= 5)	mode = 0;
+
+		modeSetDisplay();
+	}
+
+	bLastSettingBtnOn = bSettingBtnOn;
+
+
 
 	// if locked && burst button Pressed!
 	// if(!bLock){
-		if(bBurstBtnOn)		digitalWrite(PIN_SOLENOID, HIGH);
+		if(bBurstBtnOn)		shoot();
 		else 				digitalWrite(PIN_SOLENOID, LOW);
 	// }
 
@@ -709,16 +741,18 @@ void loop() {
 		ledDriver.setLEDDimmed(1, 0);
 	}
 
-
-
 	delay(10);
 }
 
-
+void modeSetDisplay(){
+	for(int i=0; i<mode+1; i++){
+		LED_BlinkShort();
+	}
+}
 
 void shoot(){
 	digitalWrite(PIN_SOLENOID, HIGH);
-	delay(1000);
+	delay(25 + mode * 10);
 	digitalWrite(PIN_SOLENOID, LOW);
 	delay(1000);
 }
