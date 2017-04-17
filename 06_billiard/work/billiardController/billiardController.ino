@@ -12,6 +12,9 @@ bool bSettingBtnOn = false;
 bool bLastSettingBtnOn = false;
 bool bModeDisplayOn = false;
 
+bool mode6LEDStatus = false;
+unsigned long lastMode6LEDToggledTimer;
+
 int mode = 0;
 
 PCA9685 ledDriver; 
@@ -521,7 +524,7 @@ void loop() {
 
 	if(!bLastSettingBtnOn && bSettingBtnOn){
 		mode++;
-		if(mode >= 5)	mode = 0;
+		if(mode >= 6)	mode = 0;
 
 		modeSetDisplay();
 	}
@@ -751,8 +754,15 @@ void modeSetDisplay(){
 }
 
 void shoot(){
-	digitalWrite(PIN_SOLENOID, HIGH);
-	delay(25 + mode * 10);
-	digitalWrite(PIN_SOLENOID, LOW);
-	delay(1000);
+	if(mode != 5){
+		digitalWrite(PIN_SOLENOID, HIGH);
+		delay(25 + mode * 10);
+		digitalWrite(PIN_SOLENOID, LOW);
+		delay(1000);
+	} else {
+		digitalWrite(PIN_SOLENOID, HIGH);
+		delay(1000);
+		digitalWrite(PIN_SOLENOID, LOW);
+		delay(1000);
+	}
 }
