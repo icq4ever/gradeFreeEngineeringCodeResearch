@@ -36,7 +36,14 @@ int LED=13;
 
 unsigned long lastLeftCmdTimer;
 unsigned long lastRightCmdTimer;
+unsigned long lastGoCmdTimer;
+unsigned long lastBackCmdTimer;
+
+int throttlingCounter = 0;
+int hanglingCounter = 0;
+
 unsigned int servoAngle = SERVOMIDDLE;
+unsigned int boostAngle = SERVOMIDDLE;
 
 void setup() {
 	pinMode(LED, OUTPUT);     
@@ -83,7 +90,7 @@ void setup() {
 	rf95.setTxPower(23, false);
 
 
-	lastLeftCmdTimer = lastRightCmdTimer = millis();
+	lastLeftCmdTimer = lastRightCmdTimer = lastGoCmdTimer = lastBackCmdTimer = millis();
 }
 
 void loop() {
@@ -98,22 +105,26 @@ void loop() {
 			if(buf[0] == '/') {
 				switch(buf[1]) {
 					case 'F':
-					digitalWrite(LED, HIGH);
-					servo.setPWM(0,0,SERVOMAX);
-					delay(500);
-					digitalWrite(LED, LOW);
-					servo.setPWM(0,0,SERVOMIDDLE);
-					delay(200);
+					lastGoCmdTimer = millis();
 					break;
+					// digitalWrite(LED, HIGH);
+					// servo.setPWM(0,0,SERVOMAX);
+					// delay(500);
+					// digitalWrite(LED, LOW);
+					// servo.setPWM(0,0,SERVOMIDDLE);
+					// delay(200);
+					// break;
 
 					case 'B':
-					digitalWrite(LED, HIGH);
-					servo.setPWM(0,0,SERVOMIN);
-					delay(500);
-					digitalWrite(LED, LOW);
-					servo.setPWM(0,0,SERVOMIDDLE);
-					delay(200);
+					lastBackCmdTimer = millis();
 					break;
+					// digitalWrite(LED, HIGH);
+					// servo.setPWM(0,0,SERVOMIN);
+					// delay(500);
+					// digitalWrite(LED, LOW);
+					// servo.setPWM(0,0,SERVOMIDDLE);
+					// delay(200);
+					// break;
 
 					case 'L':		
 					lastLeftCmdTimer = millis();
@@ -152,6 +163,29 @@ void loop() {
 		}
 	}
 	handling();
+	throttling();
+}
+
+void throttling(){
+	if(lastGoCmdTimer > lastBackCmdTimer){	// go is the last command
+		if(millis() - lastGoCmdTimer < 1000){
+			if(int(millis() - lastGoCmdTimer) % 500 < 5)	boostAngle = boostAngle + 1;
+			if(boostAngle > SERVOMAX) 						boostAngle = SERVOMAX;
+		} else { // back to no throttling
+			if(int(millis()) % 300 < 5)						boostAngle = boostAngle - 1;
+			if(boostAngle < SERVOMIDDLE)					boostAngle = SERVOMIDDLE;
+
+		}
+	} else {		// back is the last command
+		if(millis() - lastBackCmdTimer < 1000){
+			if(int(millis() - lastBackCmdTimer) % 300 < 5)	boostAngle = boostAngle - 1;
+			if(boostAngle<SERVOMIN)							boostAngle = SERVOMIN;
+		} else {
+			if(int(millis()) % 300 < 5)						boostAngle = boostAngle + 1;
+			if(boostAngle > SERVOMIDDLE)					boostAngle = SERVOMIDDLE;
+		}
+	}
+	servo.setPWM(0, 0, boostAngle);
 }
 
 void handling(){
@@ -159,27 +193,25 @@ void handling(){
 	if(lastLeftCmdTimer > lastRightCmdTimer){	// left is last command
 		if(millis() - lastLeftCmdTimer < 200){
 			// turn left
-			servoAngle ++;
+			servoAngle = servoAngle + 1;
 			servo.setPWM(1, 0, servoAngle);
-			if(servoAngle > SERVOMAX)	servoAngle = SERVOMAX;
+			if(servoAngle > SERVOMAX)		servoAngle = SERVOMAX;
 		} else { // back to middle
-			servoAngle --;
+			servoAngle = servoAngle - 1;
 			servo.setPWM(1, 0, servoAngle);
 			if(servoAngle < SERVOMIDDLE)	servoAngle = SERVOMIDDLE;
 		}
 	} else {	// right is the last command
 		if(millis() - lastRightCmdTimer < 200){
 			// turn right
-			servoAngle --;
+			servoAngle = servoAngle - 1;
 			servo.setPWM(1, 0, servoAngle);
-			if(servoAngle < SERVOMIN)	servoAngle = SERVOMIN;
+			if(servoAngle < SERVOMIN)		servoAngle = SERVOMIN;
 		} else { // back to middle
-			servoAngle ++;
+			servoAngle = servoAngle + 1;
 			servo.setPWM(1, 0, servoAngle);
 			if(servoAngle > SERVOMIDDLE)	servoAngle = SERVOMIDDLE;
 		}
 	}
-	
-
-	
 }
+
