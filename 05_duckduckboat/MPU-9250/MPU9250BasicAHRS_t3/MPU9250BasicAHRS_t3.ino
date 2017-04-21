@@ -188,8 +188,16 @@
 #define AK8963_ADDRESS 		0x0C   //  Address of magnetometer
 #endif  
 
-#define AHRS true         // set to false for basic data read
-#define SerialDebug true   // set to true to get Serial output for debugging
+#define AHRS 				false         // set to false for basic data read
+#define SerialDebug 		true   // set to true to get Serial output for debugging
+
+
+#define UPDATE_INTERVAL		100
+
+// typedef union{
+//     float tempFloat;
+//     byte tempBin[10];    // union : float / 4 binary
+// } floatingNum;
 
 // Set initial input parameters
 enum Ascale {
@@ -235,6 +243,8 @@ float   SelfTest[6];    // holds results of gyro and accelerometer self test
 // global constants for 9 DoF fusion and AHRS (Attitude and Heading Reference System)
 float GyroMeasError = PI * (40.0f / 180.0f);   // gyroscope measurement error in rads/s (start at 40 deg/s)
 float GyroMeasDrift = PI * (0.0f  / 180.0f);   // gyroscope measurement drift in rad/s/s (start at 0.0 deg/s/s)
+
+
 // There is a tradeoff in the beta parameter between accuracy and response speed.
 // In the original Madgwick study, beta of 0.041 (corresponding to GyroMeasError of 2.7 degrees/s) was found to give optimal accuracy.
 // However, with this value, the LSM9SD0 response time is about 10 seconds to a stable initial quaternion.
@@ -286,12 +296,12 @@ void setup() {
 		Serial.println("MPU9250 is online...");
 
 		MPU9250SelfTest(SelfTest); // Start by performing self test and reporting values
-		Serial.print("x-axis self test: acceleration trim within : "); Serial.print(SelfTest[0],1); Serial.println("% of factory value");
-		Serial.print("y-axis self test: acceleration trim within : "); Serial.print(SelfTest[1],1); Serial.println("% of factory value");
-		Serial.print("z-axis self test: acceleration trim within : "); Serial.print(SelfTest[2],1); Serial.println("% of factory value");
-		Serial.print("x-axis self test: gyration trim within : "); Serial.print(SelfTest[3],1); Serial.println("% of factory value");
-		Serial.print("y-axis self test: gyration trim within : "); Serial.print(SelfTest[4],1); Serial.println("% of factory value");
-		Serial.print("z-axis self test: gyration trim within : "); Serial.print(SelfTest[5],1); Serial.println("% of factory value");
+		Serial.print("x-axis self test: acceleration trim within : "); 	Serial.print(SelfTest[0],1); Serial.println("% of factory value");
+		Serial.print("y-axis self test: acceleration trim within : "); 	Serial.print(SelfTest[1],1); Serial.println("% of factory value");
+		Serial.print("z-axis self test: acceleration trim within : "); 	Serial.print(SelfTest[2],1); Serial.println("% of factory value");
+		Serial.print("x-axis self test: gyration trim within : "); 		Serial.print(SelfTest[3],1); Serial.println("% of factory value");
+		Serial.print("y-axis self test: gyration trim within : "); 		Serial.print(SelfTest[4],1); Serial.println("% of factory value");
+		Serial.print("z-axis self test: gyration trim within : "); 		Serial.print(SelfTest[5],1); Serial.println("% of factory value");
 		delay(5000);
 
 		calibrateMPU9250(gyroBias, accelBias); // Calibrate gyro and accelerometers, load biases in bias registers
@@ -310,9 +320,9 @@ void setup() {
 
 		if(SerialDebug) {
 		//  Serial.println("Calibration values: ");
-			Serial.print("X-Axis sensitivity adjustment value "); Serial.println(magCalibration[0], 2);
-			Serial.print("Y-Axis sensitivity adjustment value "); Serial.println(magCalibration[1], 2);
-			Serial.print("Z-Axis sensitivity adjustment value "); Serial.println(magCalibration[2], 2);
+			Serial.print("X-Axis sensitivity adjustment value "); 		Serial.println(magCalibration[0], 2);
+			Serial.print("Y-Axis sensitivity adjustment value "); 		Serial.println(magCalibration[1], 2);
+			Serial.print("Z-Axis sensitivity adjustment value "); 		Serial.println(magCalibration[2], 2);
 		}
 
 		delay(1000);  
@@ -353,6 +363,19 @@ void loop() {
 		mx = (float)magCount[0]*mRes*magCalibration[0] - magbias[0];  // get actual magnetometer value, this depends on scale being set
 		my = (float)magCount[1]*mRes*magCalibration[1] - magbias[1];  
 		mz = (float)magCount[2]*mRes*magCalibration[2] - magbias[2];   
+
+
+		// accX = ax*1000;
+		// accY = ay*1000;
+		// accZ = az*1000;
+
+		// gyroX = gx;
+		// gyroY = gy;
+		// gyroZ = gz;
+
+		// magX = mx;
+		// magY = my;
+		// magZ = mz;
 	}
 
 	Now = micros();
@@ -362,6 +385,7 @@ void loop() {
 	sum += deltat; // sum for averaging filter update rate
 	sumCount++;
 
+
 	// Sensors x (y)-axis of the accelerometer is aligned with the y (x)-axis of the magnetometer;
 	// the magnetometer z-axis (+ down) is opposite to z-axis (+ up) of accelerometer and gyro!
 	// We have to make some allowance for this orientationmismatch in feeding the output to the quaternion filter.
@@ -369,13 +393,14 @@ void loop() {
 	// in the LSM9DS0 sensor. This rotation can be modified to allow any convenient orientation convention.
 	// This is ok by aircraft orientation standards!  
 	// Pass gyro rate as rad/s
-	MadgwickQuaternionUpdate(ax, ay, az, gx*PI/180.0f, gy*PI/180.0f, gz*PI/180.0f,  my,  mx, mz);
+
+	//  MadgwickQuaternionUpdate(ax, ay, az, gx*PI/180.0f, gy*PI/180.0f, gz*PI/180.0f,  my,  mx, mz);
 	//  MahonyQuaternionUpdate(ax, ay, az, gx*PI/180.0f, gy*PI/180.0f, gz*PI/180.0f, my, mx, mz);
 
 
 	if (!AHRS) {
 		delt_t = millis() - count;
-		if(delt_t > 500) {
+		if(delt_t > UPDATE_INTERVAL) {
 
 			if(SerialDebug) {
 				// Print acceleration values in milligs!
@@ -399,13 +424,16 @@ void loop() {
 				Serial.print("Temperature is ");  Serial.print(temperature, 1);  Serial.println(" degrees C"); // Print T values to tenths of s degree C
 			}
 
+			sendToP5();
+
+
 			count = millis();
 		}
 	} else {
 
 	    // Serial print and/or display at 0.5 s rate independent of data rates
 		delt_t = millis() - count;
-	    if (delt_t > 500) { // update LCD once per half-second independent of read rate
+	    if (delt_t > UPDATE_INTERVAL) { // update LCD once per half-second independent of read rate
 
 	    	if(SerialDebug) {
 	    		Serial.print("ax = "); Serial.print((int)1000*ax);  
@@ -905,3 +933,29 @@ void readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t * des
 	}         // Put read results in the Rx buffer
 }
 
+
+void sendToP5(){
+	Serial.print(ax, 4);
+	Serial.print(",");
+	Serial.print(ay, 4);
+	Serial.print(",");
+	Serial.print(az, 4);
+	Serial.print(",");
+
+	Serial.print(gx, 4);
+	Serial.print(",");
+	Serial.print(gy, 4);
+	Serial.print(",");
+	Serial.print(gz, 4);
+	Serial.print(",");
+
+	Serial.print(mx, 4);
+	Serial.print(",");
+	Serial.print(my, 4);
+	Serial.print(",");
+	Serial.print(mz, 4);
+	Serial.print(",");
+
+	Serial.print(temperature, 4);
+	Serial.println();
+}
