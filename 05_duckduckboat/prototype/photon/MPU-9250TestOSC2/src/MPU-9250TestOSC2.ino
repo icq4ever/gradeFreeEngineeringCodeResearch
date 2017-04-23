@@ -1,7 +1,8 @@
 /*
-    dummyOSCBroadcaster
+    MPU-9250TestOSC2 
 
-    braodcasting message with 10ms delay, repeatly
+    mpu-9250 with particle photon.
+    library from https://github.com/loopj/i2c-sensor-hal
 */
 
 #define SENSORS_MPU9250_ATTACHED
