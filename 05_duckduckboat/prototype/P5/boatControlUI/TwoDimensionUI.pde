@@ -11,7 +11,6 @@ class TwoDimensionUI{
     PFont interfaceFont;
     PFont debugFont;
     
-    
     TwoDimensionUI(String _title, float _size){
         title = _title;
         rawValue = new PVector(0, 0);
@@ -41,7 +40,9 @@ class TwoDimensionUI{
             noFill();
             stroke(#FFFF00);
             strokeWeight(5);
-            point(    map(normalizedValue.x, -1, 1, -size/2+10, size/2-10), 
+            point(    
+                      //map(normalizedValue.x, -1, 1, -size/2+10, size/2-10),    // disable left right point drawing
+                      0,
                       map(normalizedValue.y, -1, 1, -size/2+10, size/2-10)
                       );
 
@@ -51,11 +52,27 @@ class TwoDimensionUI{
             rectMode(CORNER);
             fill(#00FF00);
             noStroke();
-            // if(normalizedValue.x > 0)           
-            rect(0, -10, map(normalizedValue.x, -1, 1, -size/2+10, size/2-10), 20);
+            // if(normalizedValue.x > 0)
+            // handling
+            if(normalizedValue.x > 0)    rect( 15, -10, map(normalizedValue.x, -1, 1, -size/2+20, size/2-20), 20);
+            else                         rect(-15, -10, map(normalizedValue.x, -1, 1, -size/2+20, size/2-20), 20);
 
             fill(#FFFF00);
-            rect(-10, 0, 20, map(normalizedValue.y, -1, 1, -size/2+10, size/2-10));
+            // throttling
+            if(normalizedValue.y > 0)    rect(-10,  15, 20, map(normalizedValue.y, -1, 1, -size/2+20, size/2-20));
+            else                         rect(-10, -15, 20, map(normalizedValue.y, -1, 1, -size/2+20, size/2-20));
+            popStyle();
+            
+            // draw rects
+            pushStyle();
+            noFill();
+            stroke(#FFFFFF);
+            
+            rect(-10, -15, 20, -size/2+20);
+            rect(-10,  15, 20,  size/2-20);
+            
+            rect( 15, -10,  size/2-20, 20);
+            rect(-15, -10, -size/2+20, 20);
             popStyle();
         }
         popMatrix();
