@@ -21,19 +21,25 @@
 // Change to 433.0 or other frequency, must match RX's freq!
 #define RF95_FREQ 433.0
 
+#define RADIOPACKETSIZE 20
+
 // Singleton instance of the radio driver
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
 int status_led = 13;
-char radiopacket[20] ={0};
+char radiopacket[RADIOPACKETSIZE] ={0};
 
 int bCupIsEmpty = 1;
 int handInHandRate = 0;
 int bHandOn = 0;
 
-int throttleValue = 0;
-int handlingValue = 0;
+int throttleValue = 100;
+int handlingValue = 100;
 
+// safty check
+bool RFMessageReady = false;
+
+unsigned long lastPingSentTimer;
 
 void setup() {
 	pinMode(13, OUTPUT);
@@ -58,6 +64,10 @@ void setup() {
 	digitalWrite(RFM95_RST, HIGH);
 	delay(10);
 
+	for(int i=0; i<RADIOPACKETSIZE; i++){
+		radiopacket[i] = 0;
+	}
+
 	while (!rf95.init()) {
 	    // Serial.println("LoRa radio init failed");
 	  	while (1);
@@ -78,29 +88,39 @@ void setup() {
 	// you can set transmitter powers from 5 to 23 dBm:
 	rf95.setTxPower(23, false);
 
+	lastPingSentTimer = millis();
 
 }
 
 int16_t packetnum = 0;  // packet counter, we increment per xmission
 
 void loop(){
-	if(digitalRead(A5)) bCupIsEmpty = 0;
-	else                bCupIsEmpty = 1;
-
-	handInHandRate = analogRead(A1);
-	if(handInHandRate > 200)  bHandOn = 1;
-	else                      bHandOn = 0;
-
-
-  // read message from processing via P5
+	// read message from processing via P5
 	while(Serial.available()){
-		throttleValue = Serial.read();
-		handlingValue = Serial.read();
-
-		
+		if(Serial.read() == '/'){
+			throttleValue = Serial.read();
+			handlingValue = Serial.read();
+		}
+		RFMessageReady = true;
 	}
-	sendMsg();
-	sendToP5();
+
+	// safety check 
+	if(RFMessageReady){
+		sendMsg();
+		sendToP5();
+	} else if(millis() - lastPingSentTimer > 100) {
+		sendPing();
+		lastPingSentTimer = millis();
+	}
+
+
+}
+
+void sendPing(){
+	radiopacket[0] = '#';
+
+	rf95.send((uint8_t *)radiopacket, 1);
+	delay(10);
 }
 
 void sendMsg(){
@@ -114,6 +134,7 @@ void sendMsg(){
 
   // Serial.println("Waiting for packet to complete..."); 
 	delay(10);
+	RFMessageReady = false;
 
 }
 
