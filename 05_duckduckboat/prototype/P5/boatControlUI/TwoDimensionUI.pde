@@ -5,6 +5,8 @@ class TwoDimensionUI{
     PVector normalizedValue;
     float size;
     
+    int graphMargin = 20;
+    
     boolean bOn;
     String title;
 
@@ -26,6 +28,10 @@ class TwoDimensionUI{
         normalizedValue.y = map(rawValue.y, -100, 100, 1, -1); 
     }
     
+    void setGraphMargin(int _margin){
+        graphMargin = _margin;    
+    }
+    
     void draw(float _x, float _y){
         pushMatrix();
         {
@@ -43,7 +49,7 @@ class TwoDimensionUI{
             point(    
                       //map(normalizedValue.x, -1, 1, -size/2+10, size/2-10),    // disable left right point drawing
                       0,
-                      map(normalizedValue.y, -1, 1, -size/2+10, size/2-10)
+                      map(normalizedValue.y, -1, 1, -size/2+graphMargin, size/2-graphMargin)
                       );
 
             popStyle();
@@ -54,13 +60,13 @@ class TwoDimensionUI{
             noStroke();
             // if(normalizedValue.x > 0)
             // handling
-            if(normalizedValue.x > 0)    rect( 15, -10, map(normalizedValue.x, -1, 1, -size/2+20, size/2-20), 20);
-            else                         rect(-15, -10, map(normalizedValue.x, -1, 1, -size/2+20, size/2-20), 20);
+            if(normalizedValue.x > 0)    rect( 15, -10, map(normalizedValue.x, -1, 1, -size/2+graphMargin, size/2-graphMargin), 20);
+            else                         rect(-15, -10, map(normalizedValue.x, -1, 1, -size/2+graphMargin, size/2-graphMargin), 20);
 
             fill(#FFFF00);
             // throttling
-            if(normalizedValue.y > 0)    rect(-10,  15, 20, map(normalizedValue.y, -1, 1, -size/2+20, size/2-20));
-            else                         rect(-10, -15, 20, map(normalizedValue.y, -1, 1, -size/2+20, size/2-20));
+            if(normalizedValue.y > 0)    rect(-10,  15, 20, map(normalizedValue.y, -1, 1, -size/2+graphMargin, size/2-graphMargin));
+            else                         rect(-10, -15, 20, map(normalizedValue.y, -1, 1, -size/2+graphMargin, size/2-graphMargin));
             popStyle();
             
             // draw rects
@@ -68,11 +74,18 @@ class TwoDimensionUI{
             noFill();
             stroke(#FFFFFF);
             
-            rect(-10, -15, 20, -size/2+20);
-            rect(-10,  15, 20,  size/2-20);
+            rect(-10, -15, 20, -size/2+graphMargin);
+            rect(-10,  15, 20,  size/2-graphMargin);
             
-            rect( 15, -10,  size/2-20, 20);
-            rect(-15, -10, -size/2+20, 20);
+            rect( 15, -10,  size/2-graphMargin, 20);
+            rect(-15, -10, -size/2+graphMargin, 20);
+            popStyle();
+            
+            pushStyle();
+            noFill();
+            stroke(#FFFFFF);
+            rectMode(CENTER);
+            rect(0, 0, size, size);
             popStyle();
         }
         popMatrix();
