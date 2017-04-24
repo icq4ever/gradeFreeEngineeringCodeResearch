@@ -18,7 +18,7 @@
 #define RFM95_CS 8
 #define RFM95_RST 4
 #define RFM95_INT 7
-
+#define TIMEOUT_MILLIS	1000
 Adafruit_PWMServoDriver servo = Adafruit_PWMServoDriver();
 
 // Change to 433.0 or other frequency, must match RX's freq!
@@ -38,6 +38,8 @@ int throttleValue;
 int handlingValue;
 int throttlingCounter = 0;
 int hanglingCounter = 0;
+
+unsigned long lastPingTimer;
 
 unsigned int servoAngle = SERVOMIDDLE;
 unsigned int boostAngle = SERVOMIDDLE;
@@ -85,6 +87,8 @@ void setup() {
   // If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then 
   // you can set transmitter powers from 5 to 23 dBm:
 	rf95.setTxPower(23, false);
+
+	lastPingTimer = millis();
 }
 
 void loop() {
@@ -95,27 +99,33 @@ void loop() {
 
 		if (rf95.recv(buf, &len)) {
 			if(buf[0] == '/'){
-				throttleValue = int(buf[1])-100;
-				handlingValue = int(buf[2])-100;
+				throttleValue = int(buf[1]);
+				handlingValue = int(buf[2]);
 
-				boostAngle = int(map(throttleValue, -100, 100, SERVOMIN, SERVOMAX));
-				servoAngle = int(map(handlingValue, 100, -100, SERVOMIN, SERVOMAX));
+				boostAngle = int(map(throttleValue, 0, 200, SERVOMIN, SERVOMAX));
+				servoAngle = int(map(handlingValue, 200, 0, SERVOMIN, SERVOMAX));
 
 				if(boostAngle == 307)	boostAngle = 308;
 				if(servoAngle == 307)	servoAngle = 308;
+				lastPingTimer = millis();
+			} else if(buf[0] == '#'){
+				//sudo code for safety
+				lastPingTimer = millis();
 			}
 
-
-			
-
-			// Serial.print(boostAngle);
-			// Serial.print(",");
-			// Serial.println(servoAngle);
-		} else 	{
+		} else {
 			Serial.println("Receive failed");
 		}
 	}
 
-	servo.setPWM(0, 0, boostAngle);
-	servo.setPWM(1, 0, servoAngle);
+	if(millis() - lastPingTimer > TIMEOUT_MILLIS){
+		servo.setPWM(0, 0, SERVOMIDDLE);
+		servo.setPWM(1, 0, SERVOMIDDLE);
+		boostAngle = SERVOMIDDLE;
+		servoAngle = SERVOMIDDLE;
+	} else {
+		servo.setPWM(0, 0, boostAngle);
+		servo.setPWM(1, 0, servoAngle);
+	}
 }
+
