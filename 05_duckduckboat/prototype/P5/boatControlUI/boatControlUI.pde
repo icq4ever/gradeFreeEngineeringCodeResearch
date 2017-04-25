@@ -11,6 +11,9 @@
  Platformer Art Deluxe (Pixel Redux) by Kenney Vleugels (www.kenney.nl)
  License (CC0)
 
+ TODO :
+ [ ] : add to feather (!while) in serial.
+
  */
 
 
@@ -36,16 +39,17 @@ int handlingValue;  // -100 ~ 100
 boolean bMouseControlEnabled = false;
 boolean bKillEnabled = true;
 
-PFont font;
+PFont font, smallFont;
 
 int lastGoCmdTimer, lastBackCmdTimer, lastLeftCmdTimer, lastRightCmdTimer, lastLORASentTimer;
 
 
 int accelCountBuffer[] = new int[10];
-int bufferIndex = 0;
-int accelCount;
+int handlingCountBuffer[] = new int[10];
+int accelCount, handlingCount;
+int tmpAccelCount, tmpHandlingCount;
 int lastMessageCountCheckedTimer;
-int tmpCount;
+int bufferIndex = 0;
 
 void settings(){
     size(300, 300);   
@@ -61,6 +65,9 @@ void setup() {
     
     cf = new ControlUIFrame(this, 300, 300, "Control");
     font = loadFont("ShareTechMono-Regular-24.vlw");
+    smallFont = loadFont("ShareTechMono-Regular-14.vlw");
+    
+    
     oscP5 = new OscP5(this, 9000);
     remoteClients = new NetAddress("192.168.0.255", 9001);
 
@@ -68,8 +75,12 @@ void setup() {
         println("[" + i + "] : " + Serial.list()[i]);
     }
     
-    lastMessageCountCheckedTimer = lastGoCmdTimer = lastBackCmdTimer = lastLeftCmdTimer = lastRightCmdTimer = lastLORASentTimer = millis();
-    for(int i=0; i<accelCountBuffer.length; i++)    accelCountBuffer[i] = 0;
+    lastMessageCountCheckedTimer = lastLORASentTimer = millis();
+    for(int i=0; i<accelCountBuffer.length; i++)    {
+        accelCountBuffer[i] = 0;
+        handlingCountBuffer[i] = 0;
+        
+    }
     controlUI = new TwoDimensionUI("controlUI", 300);    
     feather = new Serial(this, Serial.list()[1], 9600);
 }
@@ -79,12 +90,14 @@ void draw() {
     control();
     controlUI.draw(width/2, height/2);
 
-    accelCount = 0;
+    accelCount = handlingCount = 0;
 
     // fill buffer
     if(millis() - lastMessageCountCheckedTimer > 100){
-        accelCountBuffer[bufferIndex] = tmpCount;
-        tmpCount = 0;
+        accelCountBuffer[bufferIndex] = tmpAccelCount;
+        handlingCountBuffer[bufferIndex] = tmpHandlingCount;
+
+        tmpAccelCount = tmpHandlingCount = 0;
         bufferIndex++;
 
         if(bufferIndex >= accelCountBuffer.length)  bufferIndex = 0;
@@ -92,8 +105,16 @@ void draw() {
     }
 
     // calc
-    for(int i=0; i<accelCountBuffer.length; i++)    accelCount += accelCountBuffer[i];
-    text(accelCount, 20, 20);
+    for(int i=0; i<accelCountBuffer.length; i++){
+        accelCount += accelCountBuffer[i];
+        handlingCount  += handlingCountBuffer[i];
+    }
+
+    pushStyle();
+    textFont(smallFont);
+    text("accel     : " +  accelCount, 20, 20);
+    text("handling  : " +  handlingCount, 20, 40);
+    popStyle();
 
 
     // send to LoRa
@@ -160,20 +181,6 @@ void send2LoRA(){
         lastLORASentTimer = millis();
 }
 
-void keyPressed() {
-    if (key == CODED) {
-        if(keyCode == UP){
-            throttleValue++;
-            if(throttleValue > 100)		throttleValue = 100;
-        }
-        
-        if(keyCode == DOWN){
-            throttleValue--;
-            if(throttleValue < -100)	throttleValue = -100;
-        }
-    }
-}
-
 void control() {
     // if (lastGoCmdTimer > lastBackCmdTimer) {
     //     // go Command
@@ -199,28 +206,7 @@ void control() {
 
      //handling
     if(!bMouseControlEnabled){
-        if (lastLeftCmdTimer > lastRightCmdTimer) {
-            // left Command
-            if (millis() - lastLeftCmdTimer < 120) {
-                if (handlingValue > 0)                    handlingValue = 0;
-                handlingValue = handlingValue - 3;
-                if (handlingValue < -100)                 handlingValue = -100;
-            } else {
-                handlingValue = 0;
-                if (handlingValue > 0)                    handlingValue = 0;
-            }
-        } else if (lastRightCmdTimer > lastLeftCmdTimer) {
-            // right Command
-            if (millis() - lastRightCmdTimer < 120) {
-                if (handlingValue < 0)                    handlingValue = 0;
-                handlingValue = handlingValue + 3;
-                if (handlingValue > 100)                  handlingValue = 100;
-            } else {
-                //if(millis() % 2 == 0)
-                handlingValue= 0;
-                if (handlingValue < 0)                    handlingValue = 0;
-            }
-        }
+        handlingValue = (int)constrain(map(handlingCount, -10, 10, -100, 100), -100, 100);
     }
 
     PVector temp;
@@ -239,7 +225,9 @@ void serialEvent(Serial port) {
 
 // 
 void oscEvent(OscMessage incommingMessage) {
-    if(incommingMessage.checkAddrPattern("/accel"))     tmpCount++;
+    if(incommingMessage.checkAddrPattern("/accel"))     tmpAccelCount++;
+    if(incommingMessage.checkAddrPattern("/left"))      tmpHandlingCount--;
+    if(incommingMessage.checkAddrPattern("/right"))     tmpHandlingCount++;
 }
 
 void mouseMoved(){

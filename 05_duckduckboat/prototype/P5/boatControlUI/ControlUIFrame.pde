@@ -1,3 +1,7 @@
+/*
+    duck boat control UI
+*/
+
 class ControlUIFrame extends PApplet {
     int w, h;
     PApplet parent;
