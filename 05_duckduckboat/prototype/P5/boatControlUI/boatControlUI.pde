@@ -19,15 +19,21 @@
  /duck/whisper
  */
 
+import controlP5.*;
 import oscP5.*;
 import netP5.*;
 import processing.serial.*;
+
+
+ControlUIFrame cf;
 
 OscP5 oscP5;
 NetAddress myRemoteLocation;
 
 TwoDimensionUI controlUI;
 Serial feather;
+
+PImage heartImage;
 
 int throttleValue;  // -100 ~ 100
 int handlingValue;  // -100 ~ 100
@@ -36,20 +42,29 @@ float lastGoCmdTimer, lastBackCmdTimer, lastLeftCmdTimer, lastRightCmdTimer, las
 boolean bMouseControlEnabled = false;
 boolean bKillEnabled = false;
 
-
-
 PFont font;
 
+void settings(){
+    size(300, 300);
+    
+}
+
 void setup() {
-    size(300,300);
+    //size(300,300);
+    frame.setLocation(displayWidth, 360);
     frameRate(60);
     
+    heartImage = loadImage("heart.png");
+    
+    cf = new ControlUIFrame(this, 300, 300, "Control");
     font = loadFont("ShareTechMono-Regular-24.vlw");
     oscP5 = new OscP5(this, 8000);
 
     for (int i=0; i<Serial.list().length; i++) {
         println("[" + i + "] : " + Serial.list()[i]);
     }
+    
+    
     controlUI = new TwoDimensionUI("controlUI", 300);    
     lastGoCmdTimer = lastBackCmdTimer = lastLeftCmdTimer = lastRightCmdTimer = lastLORASentTimer = millis();
 
@@ -101,19 +116,19 @@ void draw() {
 }
 
 void keyReleased() {
-    if(key == ' ' ){
-        bMouseControlEnabled = !bMouseControlEnabled;
-        if(!bMouseControlEnabled)    handlingValue = 0;
-    }
+    //if(key == ' ' ){
+    //    bMouseControlEnabled = !bMouseControlEnabled;
+    //    if(!bMouseControlEnabled)    handlingValue = 0;
+    //}
     
-    if(key == 'z' || key == 'Z'){
-        bKillEnabled = !bKillEnabled;
-        if(!bKillEnabled){
-            throttleValue = 0;
-            handlingValue = 0;
-        }
+    //if(key == 'z' || key == 'Z'){
+    //    bKillEnabled = !bKillEnabled;
+    //    if(!bKillEnabled){
+    //        throttleValue = 0;
+    //        handlingValue = 0;
+    //    }
         
-    }
+    //}
     
     //if (keyCode == LEFT) {
     //    // feather.write("l");
@@ -130,23 +145,23 @@ void keyPressed() {
     if (key == CODED) {
         if(keyCode == UP){
             throttleValue++;
-            if(throttleValue > 100)    throttleValue = 100;
+            if(throttleValue > 100)		throttleValue = 100;
         }
         
         if(keyCode == DOWN){
             throttleValue--;
-            if(throttleValue < -100)   throttleValue = -100;
+            if(throttleValue < -100)	throttleValue = -100;
         }
         
         
         if (keyCode == LEFT) {
             handlingValue--;
-            if (handlingValue < -100)    handlingValue = -100;
+            if (handlingValue < -100)	handlingValue = -100;
         }
 
         if (keyCode == RIGHT) {
             handlingValue++;
-            if (handlingValue > 100)    handlingValue = 100;
+            if (handlingValue > 100)	handlingValue = 100;
         }
     }
 }
