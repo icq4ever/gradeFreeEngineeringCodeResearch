@@ -32,7 +32,7 @@ class ControlUIFrame extends PApplet {
             .plugTo(parent, "bKillEnabled")
             .setPosition(20, 20)
             .setSize(20, 20)
-            .setValue(false);
+            .setValue(true);        // for safety
         toggleOffline.getCaptionLabel().align(ControlP5.RIGHT_OUTSIDE, ControlP5.TOP).setPaddingX(5);
 
         toggleMouseOverride = cp5.addToggle("mouse override")
@@ -74,8 +74,6 @@ class ControlUIFrame extends PApplet {
         cp5.mapKeyFor(new ControlKey() { public void keyEvent() { 
                 bKillEnabled = !bKillEnabled;
                 if (!bKillEnabled) {
-                    throttleValue = 0;
-                    handlingValue = 0;
                     toggleOffline.setValue(false);
                 } else {
                     toggleOffline.setValue(true);
@@ -98,7 +96,10 @@ class ControlUIFrame extends PApplet {
         background(#5F5F5F);
         pushStyle();
         imageMode(CENTER);
-        image(heartImage, 230, 250, 100, 100);
+        
+        image(duckImage, 235, 240 + sin(radians(millis())/10)*4, 52, 52);
+        image(waterImage, 230-waterImage.width/2, 250, 52, 52);
+        image(waterImage, 230+waterImage.width/2, 250, 52, 52);
         popStyle();
         pushStyle();
         noFill();

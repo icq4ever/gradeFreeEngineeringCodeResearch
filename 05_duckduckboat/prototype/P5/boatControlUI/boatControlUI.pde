@@ -7,6 +7,10 @@
  duck pixel icon is from "http://piq.codeus.net/picture/370697/rubber_ducky"
  by ZacharyB
  free for cormmercial use. 
+
+ Platformer Art Deluxe (Pixel Redux) by Kenney Vleugels (www.kenney.nl)
+ License (CC0)
+
  */
 
 
@@ -19,25 +23,32 @@ import processing.serial.*;
 ControlUIFrame cf;
 
 OscP5 oscP5;
-NetAddress myRemoteLocation;
+NetAddress remoteClients;
 
 TwoDimensionUI controlUI;
 Serial feather;
 
-PImage heartImage;
+PImage duckImage, waterImage;
 
 int throttleValue;  // -100 ~ 100
 int handlingValue;  // -100 ~ 100
 
-float lastGoCmdTimer, lastBackCmdTimer, lastLeftCmdTimer, lastRightCmdTimer, lastLORASentTimer;
 boolean bMouseControlEnabled = false;
-boolean bKillEnabled = false;
+boolean bKillEnabled = true;
 
 PFont font;
 
+int lastGoCmdTimer, lastBackCmdTimer, lastLeftCmdTimer, lastRightCmdTimer, lastLORASentTimer;
+
+
+int accelCountBuffer[] = new int[10];
+int bufferIndex = 0;
+int accelCount;
+int lastMessageCountCheckedTimer;
+int tmpCount;
+
 void settings(){
-    size(300, 300);
-    
+    size(300, 300);   
 }
 
 void setup() {
@@ -45,48 +56,48 @@ void setup() {
     frame.setLocation(displayWidth, 360);
     frameRate(60);
     
-    heartImage = loadImage("duck.png");
+    duckImage = loadImage("duck.png");
+    waterImage = loadImage("water.png");
     
     cf = new ControlUIFrame(this, 300, 300, "Control");
     font = loadFont("ShareTechMono-Regular-24.vlw");
-    oscP5 = new OscP5(this, 8000);
+    oscP5 = new OscP5(this, 9000);
+    remoteClients = new NetAddress("192.168.0.255", 9001);
 
     for (int i=0; i<Serial.list().length; i++) {
         println("[" + i + "] : " + Serial.list()[i]);
     }
     
+    lastMessageCountCheckedTimer = lastGoCmdTimer = lastBackCmdTimer = lastLeftCmdTimer = lastRightCmdTimer = lastLORASentTimer = millis();
+    for(int i=0; i<accelCountBuffer.length; i++)    accelCountBuffer[i] = 0;
     controlUI = new TwoDimensionUI("controlUI", 300);    
-    lastGoCmdTimer = lastBackCmdTimer = lastLeftCmdTimer = lastRightCmdTimer = lastLORASentTimer = millis();
-
     feather = new Serial(this, Serial.list()[1], 9600);
 }
 
 void draw() {
     background(0);
     control();
-
     controlUI.draw(width/2, height/2);
 
-    if (millis() - lastLORASentTimer > 100) {
-        byte message[] = new byte[4];
-        
-        message[0] = '/';
-        //message[1] = (byte)(-100);
-        //message[2] = (byte)(260);
-        if(bKillEnabled){
-            message[1] = (byte)(100);
-            message[2] = (byte)(100);
-        } else {
-            message[1] = (byte)(throttleValue + 100);
-            message[2] = (byte)(handlingValue + 100);
-        }
-        
-        feather.write(message);
-        
-        //println("THROTTLE Angle : " + int(map(throttleValue, -100, 100, SERVOMIN, SERVOMAX)) + "\t " + 
-        //        "HANDING Angle :"   + int(map(handlingValue, -100, 100, SERVOMIN, SERVOMAX)));
-        lastLORASentTimer = millis();
+    accelCount = 0;
+
+    // fill buffer
+    if(millis() - lastMessageCountCheckedTimer > 100){
+        accelCountBuffer[bufferIndex] = tmpCount;
+        tmpCount = 0;
+        bufferIndex++;
+
+        if(bufferIndex >= accelCountBuffer.length)  bufferIndex = 0;
+        lastMessageCountCheckedTimer = millis();
     }
+
+    // calc
+    for(int i=0; i<accelCountBuffer.length; i++)    accelCount += accelCountBuffer[i];
+    text(accelCount, 20, 20);
+
+
+    // send to LoRa
+    if (millis() - lastLORASentTimer > 100) send2LoRA();
     
     if(bMouseControlEnabled){
         pushStyle();
@@ -106,30 +117,48 @@ void draw() {
 }
 
 void keyReleased() {
-    //if(key == ' ' ){
-    //    bMouseControlEnabled = !bMouseControlEnabled;
-    //    if(!bMouseControlEnabled)    handlingValue = 0;
-    //}
+    if(key == 'z' || key == 'Z'){
+        bKillEnabled = !bKillEnabled;
+        if (!bKillEnabled) {
+            cf.toggleOffline.setValue(false);
+        } else {
+            cf.toggleOffline.setValue(true);
+        }
+
+        if (!bMouseControlEnabled) { 
+            handlingValue = 0;
+            cf.toggleMouseOverride.setValue(false);
+        } else {
+            cf.toggleMouseOverride.setValue(true);
+        }
+    }
+
+    if(key == ' '){
+        bMouseControlEnabled = !bMouseControlEnabled;
+    }
     
-    //if(key == 'z' || key == 'Z'){
-    //    bKillEnabled = !bKillEnabled;
-    //    if(!bKillEnabled){
-    //        throttleValue = 0;
-    //        handlingValue = 0;
-    //    }
-        
-    //}
-    
-    //if (keyCode == LEFT) {
-    //    // feather.write("l");
-    //    lastLeftCmdTimer = millis();
-    //}   
-    //if (keyCode == RIGHT) {
-    //    // feather.write("r");
-    //    lastRightCmdTimer = millis();
-    //}
 }
 
+void send2LoRA(){
+     byte message[] = new byte[4];
+        
+        message[0] = '/';
+        //message[1] = (byte)(-100);
+        //message[2] = (byte)(260);
+        if(bKillEnabled){
+            message[1] = (byte)(100);
+            message[2] = (byte)(100);
+        } else {
+            message[1] = (byte)(throttleValue + 100);
+            message[2] = (byte)(handlingValue + 100);
+        }
+        
+        feather.write(message);
+        
+        //println("THROTTLE Angle : " + int(map(throttleValue, -100, 100, SERVOMIN, SERVOMAX)) + "\t " + 
+        //        "HANDING Angle :"   + int(map(handlingValue, -100, 100, SERVOMIN, SERVOMAX)));
+        lastLORASentTimer = millis();
+}
 
 void keyPressed() {
     if (key == CODED) {
@@ -142,41 +171,30 @@ void keyPressed() {
             throttleValue--;
             if(throttleValue < -100)	throttleValue = -100;
         }
-        
-        
-        if (keyCode == LEFT) {
-            handlingValue--;
-            if (handlingValue < -100)	handlingValue = -100;
-        }
-
-        if (keyCode == RIGHT) {
-            handlingValue++;
-            if (handlingValue > 100)	handlingValue = 100;
-        }
     }
 }
 
 void control() {
-    if (lastGoCmdTimer > lastBackCmdTimer) {
-        // go Command
-        if (millis() - lastGoCmdTimer < 150) {
-            throttleValue++;
-            if (throttleValue > 100)                  throttleValue = 100;
-        } else {
-            throttleValue = 0;
-            if (throttleValue<0)                      throttleValue = 0;
-        }
-    } else if (lastBackCmdTimer > lastGoCmdTimer) {
-        // back Command
-        if (millis() - lastBackCmdTimer < 100) {
-            if (millis() % 2 == 0)                    throttleValue--;
-            if (throttleValue<-100)                   throttleValue = -100;
-        } else {
-            //if(millis() % 1000 < 3) 
-            throttleValue++;
-            if (throttleValue > 0)                    throttleValue = 0;
-        }
-    }
+    // if (lastGoCmdTimer > lastBackCmdTimer) {
+    //     // go Command
+    //     if (millis() - lastGoCmdTimer < 150) {
+    //         throttleValue++;
+    //         if (throttleValue > 100)                  throttleValue = 100;
+    //     } else {
+    //         throttleValue = 0;
+    //         if (throttleValue<0)                      throttleValue = 0;
+    //     }
+    // } else if (lastBackCmdTimer > lastGoCmdTimer) {
+    //     // back Command
+    //     if (millis() - lastBackCmdTimer < 100) {
+    //         if (millis() % 2 == 0)                    throttleValue--;
+    //         if (throttleValue<-100)                   throttleValue = -100;
+    //     } else {
+    //         //if(millis() % 1000 < 3) 
+    //         throttleValue++;
+    //         if (throttleValue > 0)                    throttleValue = 0;
+    //     }
+    // }
 
 
      //handling
@@ -206,36 +224,22 @@ void control() {
     }
 
     PVector temp;
+    if(!bKillEnabled)   throttleValue = (int)constrain(map(accelCount, -50, 50, -100, 100), -100, 100);
+    else                throttleValue = 0;
     temp = new PVector(handlingValue, throttleValue);
-    //println(handlingValue + " : "  + throttleValue);
-    //temp.x = throttleValue;
-    //temp.y = handlingValue;
-    controlUI.update(temp);
+    controlUI.update(temp);     // UI update
 }
 
 void serialEvent(Serial port) {
     if (port == feather) { 
         String inString = port.readStringUntil('\n'); 
-
-        //if(inString != null)    println(inString);
     }
 }
 
+
+// 
 void oscEvent(OscMessage incommingMessage) {
-    if (incommingMessage.checkAddrPattern("/duck/accel")) {
-        lastGoCmdTimer = millis();
-    } else {
-        //lastBackCmdTimer = millis();
-        //if (throttleValue<0)                      throttleValue = 0;
-    }
-    
-    if (incommingMessage.checkAddrPattern("/duck/whisper")) {
-        if(!bMouseControlEnabled)    lastRightCmdTimer = millis();
-    }
-    
-    if (incommingMessage.checkAddrPattern("/duck/piezo")) {
-        if(!bMouseControlEnabled)    lastLeftCmdTimer = millis();
-    }
+    if(incommingMessage.checkAddrPattern("/accel"))     tmpCount++;
 }
 
 void mouseMoved(){
