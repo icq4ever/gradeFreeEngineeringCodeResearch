@@ -7,9 +7,10 @@ NetAddress target;
 PFont font;
 int accelCount;
 
-int accelCountBuffer[] = new int[3];
+int accelCountBuffer[] = new int[10];
 int bufferIndex=0;
 int lastMessageCountCheckedTimer;
+int tmpCount;
 
 
 void setup(){
@@ -29,23 +30,32 @@ void setup(){
 
 void draw(){
     background(0);
-    
-    text(accelCount, 20, 20);
+    accelCount = 0;
     
     //textAlign(CENTER, CENTER);
     //text(accelCount, width/2, height/2);
     
-    rect(0, height-20, map(accelCount, 0, 100, 0, width), 20);
     
-    if(millis() - lastMessageCountCheckedTimer > 1000){
-        accelCount = accelCountBuffer[bufferIndex];
-        accelCountBuffer[bufferIndex] = 0;
+    
+    // fill counter buffer in every 20 ms
+    if(millis() - lastMessageCountCheckedTimer > 100){
+        accelCountBuffer[bufferIndex] = tmpCount;
+        tmpCount = 0;
         bufferIndex++;
         if(bufferIndex >= accelCountBuffer.length)    bufferIndex = 0;
         lastMessageCountCheckedTimer = millis();
     }
+    
+    for(int i=0; i<accelCountBuffer.length; i++){
+            accelCount += accelCountBuffer[i];
+        }
+    
+    
+    //accelCount /= accelCountBuffer.length;
+    text(accelCount, 20, 20);
+    rect(0, height-20, map(accelCount, 0, 100, 0, width), 20);
 }
 
 void oscEvent(OscMessage _message){
-    if(_message.checkAddrPattern("/accel"))        accelCountBuffer[bufferIndex]++;    
+    if(_message.checkAddrPattern("/accel"))        tmpCount++;    
 }

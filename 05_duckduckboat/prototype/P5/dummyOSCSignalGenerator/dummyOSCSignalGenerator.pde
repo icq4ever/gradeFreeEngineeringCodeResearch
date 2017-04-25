@@ -21,7 +21,7 @@ void setup(){
 void draw(){
     background(0);
     //for(int i=0; i<lastSentTimer.length; i++){
-        if(millis() - lastSentTimer > 90){
+        if(millis() - lastSentTimer > 100){
             String oscAddress = "/accel";;
             OscMessage message = new OscMessage(oscAddress);
             
