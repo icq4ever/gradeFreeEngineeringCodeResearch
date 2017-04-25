@@ -4,20 +4,11 @@
  
  
  [image License]
- teardrop icon is from "http://www.icon100.com/icon/196045/drop".
+ duck pixel icon is from "http://piq.codeus.net/picture/370697/rubber_ducky"
+ by ZacharyB
  free for cormmercial use. 
- 
- handshake icon is from "https://thenounproject.com/term/handshake/24974/".
- by [Sam Garner](https://thenounproject.com/samtgarner)
- creative commons license.
- 
  */
 
-/*
- /duck/accel : 1
- /duck/gyro
- /duck/whisper
- */
 
 import controlP5.*;
 import oscP5.*;
@@ -54,7 +45,7 @@ void setup() {
     frame.setLocation(displayWidth, 360);
     frameRate(60);
     
-    heartImage = loadImage("heart.png");
+    heartImage = loadImage("duck.png");
     
     cf = new ControlUIFrame(this, 300, 300, "Control");
     font = loadFont("ShareTechMono-Regular-24.vlw");
@@ -63,7 +54,6 @@ void setup() {
     for (int i=0; i<Serial.list().length; i++) {
         println("[" + i + "] : " + Serial.list()[i]);
     }
-    
     
     controlUI = new TwoDimensionUI("controlUI", 300);    
     lastGoCmdTimer = lastBackCmdTimer = lastLeftCmdTimer = lastRightCmdTimer = lastLORASentTimer = millis();
