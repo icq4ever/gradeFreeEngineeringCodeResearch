@@ -36,6 +36,8 @@ float lastGoCmdTimer, lastBackCmdTimer, lastLeftCmdTimer, lastRightCmdTimer, las
 boolean bMouseControlEnabled = false;
 boolean bKillEnabled = false;
 
+
+
 PFont font;
 
 void setup() {
@@ -152,7 +154,7 @@ void keyPressed() {
 void control() {
     if (lastGoCmdTimer > lastBackCmdTimer) {
         // go Command
-        if (millis() - lastGoCmdTimer < 120) {
+        if (millis() - lastGoCmdTimer < 150) {
             throttleValue++;
             if (throttleValue > 100)                  throttleValue = 100;
         } else {
@@ -173,26 +175,28 @@ void control() {
 
 
      //handling
-    if (lastLeftCmdTimer > lastRightCmdTimer) {
-        // left Command
-        if (millis() - lastLeftCmdTimer < 120) {
-            if (handlingValue > 0)                    handlingValue = 0;
-            handlingValue--;
-            if (handlingValue < -100)                 handlingValue = -100;
-        } else {
-            handlingValue = 0;
-            if (handlingValue > 0)                    handlingValue = 0;
-        }
-    } else if (lastRightCmdTimer > lastLeftCmdTimer) {
-        // right Command
-        if (millis() - lastRightCmdTimer < 120) {
-            if (handlingValue < 0)                    handlingValue = 0;
-            handlingValue++;
-            if (handlingValue > 100)                  handlingValue = 100;
-        } else {
-            //if(millis() % 2 == 0)
-            handlingValue=;
-            if (handlingValue < 0)                    handlingValue = 0;
+    if(!bMouseControlEnabled){
+        if (lastLeftCmdTimer > lastRightCmdTimer) {
+            // left Command
+            if (millis() - lastLeftCmdTimer < 120) {
+                if (handlingValue > 0)                    handlingValue = 0;
+                handlingValue = handlingValue - 3;
+                if (handlingValue < -100)                 handlingValue = -100;
+            } else {
+                handlingValue = 0;
+                if (handlingValue > 0)                    handlingValue = 0;
+            }
+        } else if (lastRightCmdTimer > lastLeftCmdTimer) {
+            // right Command
+            if (millis() - lastRightCmdTimer < 120) {
+                if (handlingValue < 0)                    handlingValue = 0;
+                handlingValue = handlingValue + 3;
+                if (handlingValue > 100)                  handlingValue = 100;
+            } else {
+                //if(millis() % 2 == 0)
+                handlingValue= 0;
+                if (handlingValue < 0)                    handlingValue = 0;
+            }
         }
     }
 
@@ -205,7 +209,7 @@ void control() {
 }
 
 void serialEvent(Serial port) {
-    if (port == feather) {
+    if (port == feather) { 
         String inString = port.readStringUntil('\n'); 
 
         //if(inString != null)    println(inString);
@@ -221,11 +225,11 @@ void oscEvent(OscMessage incommingMessage) {
     }
     
     if (incommingMessage.checkAddrPattern("/duck/whisper")) {
-        lastRightCmdTimer = millis();
+        if(!bMouseControlEnabled)    lastRightCmdTimer = millis();
     }
     
     if (incommingMessage.checkAddrPattern("/duck/piezo")) {
-        lastLeftCmdTimer = millis();
+        if(!bMouseControlEnabled)    lastLeftCmdTimer = millis();
     }
 }
 

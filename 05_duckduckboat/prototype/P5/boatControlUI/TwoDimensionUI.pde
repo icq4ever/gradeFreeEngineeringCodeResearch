@@ -81,12 +81,12 @@ class TwoDimensionUI{
             rect(-15, -10, -size/2+graphMargin, 20);
             popStyle();
             
-            pushStyle();
-            noFill();
-            stroke(#FFFFFF);
-            rectMode(CENTER);
-            rect(0, 0, size, size);
-            popStyle();
+            //pushStyle();
+            //noFill();
+            //stroke(#FFFFFF);
+            //rectMode(CENTER);
+            //rect(0, 0, size, size);
+            //popStyle();
         }
         popMatrix();
         
