@@ -7,7 +7,7 @@ class ControlUIFrame extends PApplet {
     PApplet parent;
     ControlP5 cp5;
     Textarea description;
-    Toggle toggleOffline, toggleMouseOverride;
+    Toggle toggleOffline, toggleControlOverride;
 
     public ControlUIFrame(PApplet _parent, int _w, int _h, String _name) {
         super();   
@@ -23,14 +23,15 @@ class ControlUIFrame extends PApplet {
     }
 
     public void setup() {
-        surface.setLocation(displayWidth, 20);
+        surface.setLocation(0, 20);
         cp5 = new ControlP5(this);
 
         description = cp5.addTextarea("desc")
             .setPosition(20, 200)
             .setLineHeight(14)
             .setColor(color(255));
-        description.setText("DUCKDUCKBOAT CONTROLLER\n\nALT+L \t: load settings\nALT+S\t: save settings\nSPACE\t: mouse handling \nZ\t:sudo offline");
+        //description.setText("LDUCKBOAT CONTROLLER\n\nALT+L \t: load settings\nALT+S\t: save settings\nSPACE\t: manual control on/off \nZ\t: sudo offline on/off");
+        description.setText("LOVEDUCKBOAT CONTROLLER\n\nSPACE\t: manual control on/off \nZ\t: sudo offline on/off\n<, > : throttle");
 
         toggleOffline = cp5.addToggle("offline")
             .plugTo(parent, "bKillEnabled")
@@ -39,13 +40,12 @@ class ControlUIFrame extends PApplet {
             .setValue(true);        // for safety
         toggleOffline.getCaptionLabel().align(ControlP5.RIGHT_OUTSIDE, ControlP5.TOP).setPaddingX(5);
 
-        toggleMouseOverride = cp5.addToggle("mouse override")
-            .plugTo(parent, "bMouseControlEnabled")
+        toggleControlOverride = cp5.addToggle("manualcontrol\noverride")
+            .plugTo(parent, "bManualControlEnabled")
             .setPosition(150, 20)
             .setSize(20, 20)
             .setValue(false);
-        toggleMouseOverride.getCaptionLabel().align(ControlP5.RIGHT_OUTSIDE, ControlP5.TOP).setPaddingX(5);
-
+        toggleControlOverride.getCaptionLabel().align(ControlP5.RIGHT_OUTSIDE, ControlP5.TOP).setPaddingX(5);
 
         cp5.addSlider("accel-sensitivity")
             .plugTo(parent, "throttleSensitivity")
@@ -70,30 +70,61 @@ class ControlUIFrame extends PApplet {
         //cp5.getController("handling-sensitivity")
 
 
-        // save/load key mappding setting
-        cp5.mapKeyFor(new ControlKey() { public void keyEvent() { cp5.saveProperties("settings.json");}}, ALT, 's');
-        cp5.mapKeyFor(new ControlKey() { public void keyEvent() { cp5.loadProperties("settings.json");}}, ALT, 'l');
+        //// save/load key mappding setting
+        //cp5.mapKeyFor(new ControlKey() { public void keyEvent() { cp5.saveProperties("settings.json");}}, ALT, 's');
+        //cp5.mapKeyFor(new ControlKey() { public void keyEvent() { cp5.loadProperties("settings.json");}}, ALT, 'l');
 
         // offline mode keymapping
         cp5.mapKeyFor(new ControlKey() { public void keyEvent() { 
                 bKillEnabled = !bKillEnabled;
                 if (!bKillEnabled) {
                     toggleOffline.setValue(false);
+                    keyThrottleValue = 0;
+                    handlingValue = 0;
                 } else {
                     toggleOffline.setValue(true);
                 }
             }}, 'z');
 
-        // offline mode keymapping
+        // manual control override keyMapping setting
         cp5.mapKeyFor(new ControlKey() { public void keyEvent() { 
-                bMouseControlEnabled = !bMouseControlEnabled;
-                if (!bMouseControlEnabled) { 
+                bManualControlEnabled = !bManualControlEnabled;
+                if (!bManualControlEnabled) {
+                    toggleControlOverride.setValue(false);
+                    keyThrottleValue = 0;
                     handlingValue = 0;
-                    toggleMouseOverride.setValue(false);
                 } else {
-                    toggleMouseOverride.setValue(true);
+                    toggleControlOverride.setValue(true);
                 }
             }}, ' ');
+            
+        // manual control key
+        cp5.mapKeyFor(new ControlKey() { public void keyEvent() { 
+                if (bManualControlEnabled) {
+                    keyThrottleValue++;
+                    if(keyThrottleValue > 100)    keyThrottleValue = 100;
+                }
+            }}, '.');
+            
+        cp5.mapKeyFor(new ControlKey() { public void keyEvent() { 
+                if (bManualControlEnabled) {
+                    keyThrottleValue++;
+                    if(keyThrottleValue > 100)    keyThrottleValue = 100;
+                }
+            }}, '>');
+            
+        cp5.mapKeyFor(new ControlKey() { public void keyEvent() { 
+                if (bManualControlEnabled) {
+                    keyThrottleValue--;
+                    if(keyThrottleValue < -100)    keyThrottleValue = -100;
+                }
+            }}, ',');
+        cp5.mapKeyFor(new ControlKey() { public void keyEvent() { 
+                if (bManualControlEnabled) {
+                    keyThrottleValue--;
+                    if(keyThrottleValue < -100)    keyThrottleValue = -100;
+                }
+            }}, '<');
     }
 
     void draw() {
@@ -110,7 +141,5 @@ class ControlUIFrame extends PApplet {
         stroke(#EFEFEF);
         line(20, 180, this.width-20, 180);
         popStyle();
-        
-        
     }
 }

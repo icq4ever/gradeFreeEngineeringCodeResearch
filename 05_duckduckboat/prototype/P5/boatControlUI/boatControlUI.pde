@@ -35,14 +35,15 @@ PImage duckImage, waterImage;
 
 int throttleValue;  // -100 ~ 100
 int handlingValue;  // -100 ~ 100
-
-boolean bMouseControlEnabled = false;
+int keyThrottleValue = 0;
+boolean bManualControlEnabled = false;
 boolean bKillEnabled = true;
+
+
 
 PFont font, smallFont;
 
 int lastGoCmdTimer, lastBackCmdTimer, lastLeftCmdTimer, lastRightCmdTimer, lastLORASentTimer;
-
 
 int accelCountBuffer[] = new int[10];
 int handlingCountBuffer[] = new int[10];
@@ -57,7 +58,7 @@ void settings(){
 
 void setup() {
     //size(300,300);
-    frame.setLocation(displayWidth, 360);
+    frame.setLocation(0, 360);
     frameRate(60);
     
     duckImage = loadImage("duck.png");
@@ -112,19 +113,20 @@ void draw() {
 
     pushStyle();
     textFont(smallFont);
-    text("accel     : " +  accelCount, 20, 20);
-    text("handling  : " +  handlingCount, 20, 40);
+    text("accel     : " +  accelCount, 10, 20);
+    text("handling  : " +  handlingCount, 10, 40);
     popStyle();
 
 
     // send to LoRa
     if (millis() - lastLORASentTimer > 100) send2LoRA();
     
-    if(bMouseControlEnabled){
+    if(bManualControlEnabled){
         pushStyle();
         textFont(font);
         textAlign(LEFT, BOTTOM);
-        text("mouse\nenabled", 20, height-20);
+        fill(#FFFF00);
+        text("MANUAL", 20, height-20);
         popStyle();
     }
     
@@ -132,32 +134,50 @@ void draw() {
         pushStyle();
         textFont(font);
         textAlign(RIGHT, BOTTOM);
+        fill(#33FF00);
         text("OFFLINE", width-20, height-20);
         popStyle();
     }
 }
 
+void keyPressed(){
+    if(key == '.' || key == '>'){
+        keyThrottleValue++;
+        if(keyThrottleValue > 100)      keyThrottleValue = 100;
+    } else if (key == ',' || key == '<'){
+        keyThrottleValue--;
+        if(keyThrottleValue < -100)     keyThrottleValue = -100;
+    }
+    
+}
+
 void keyReleased() {
     if(key == 'z' || key == 'Z'){
         bKillEnabled = !bKillEnabled;
+        
         if (!bKillEnabled) {
             cf.toggleOffline.setValue(false);
+            handlingValue = 0;
+            throttleValue = 0 ;
         } else {
             cf.toggleOffline.setValue(true);
         }
-
-        if (!bMouseControlEnabled) { 
-            handlingValue = 0;
-            cf.toggleMouseOverride.setValue(false);
-        } else {
-            cf.toggleMouseOverride.setValue(true);
-        }
+        handlingValue = 0;
+        keyThrottleValue = 0;
+        
     }
 
     if(key == ' '){
-        bMouseControlEnabled = !bMouseControlEnabled;
-    }
-    
+        bManualControlEnabled = !bManualControlEnabled;
+        
+        if (!bManualControlEnabled) { 
+            cf.toggleControlOverride.setValue(false);
+        } else {
+            cf.toggleControlOverride.setValue(true);
+        }
+        handlingValue = 0;
+        keyThrottleValue = 0;
+    }    
 }
 
 void send2LoRA(){
@@ -179,57 +199,44 @@ void send2LoRA(){
         //println("THROTTLE Angle : " + int(map(throttleValue, -100, 100, SERVOMIN, SERVOMAX)) + "\t " + 
         //        "HANDING Angle :"   + int(map(handlingValue, -100, 100, SERVOMIN, SERVOMAX)));
         lastLORASentTimer = millis();
+        
+        //println(keyThrottleValue);
 }
 
 void control() {
-    // if (lastGoCmdTimer > lastBackCmdTimer) {
-    //     // go Command
-    //     if (millis() - lastGoCmdTimer < 150) {
-    //         throttleValue++;
-    //         if (throttleValue > 100)                  throttleValue = 100;
-    //     } else {
-    //         throttleValue = 0;
-    //         if (throttleValue<0)                      throttleValue = 0;
-    //     }
-    // } else if (lastBackCmdTimer > lastGoCmdTimer) {
-    //     // back Command
-    //     if (millis() - lastBackCmdTimer < 100) {
-    //         if (millis() % 2 == 0)                    throttleValue--;
-    //         if (throttleValue<-100)                   throttleValue = -100;
-    //     } else {
-    //         //if(millis() % 1000 < 3) 
-    //         throttleValue++;
-    //         if (throttleValue > 0)                    throttleValue = 0;
-    //     }
-    // }
-
-
-     //handling
-    if(!bMouseControlEnabled){
+    if(bManualControlEnabled){
+        throttleValue = keyThrottleValue;
+    } else {
+        throttleValue = (int)constrain(map(accelCount, -50, 50, -100, 100), -100, 100);
         handlingValue = (int)constrain(map(handlingCount, -10, 10, -100, 100), -100, 100);
     }
 
-    PVector temp;
-    if(!bKillEnabled)   throttleValue = (int)constrain(map(accelCount, -50, 50, -100, 100), -100, 100);
-    else                throttleValue = 0;
-    temp = new PVector(handlingValue, throttleValue);
+    if(bKillEnabled){
+        throttleValue = 0;
+        handlingValue = 0;
+    } 
+    
+    PVector temp = new PVector(handlingValue, throttleValue);
     controlUI.update(temp);     // UI update
 }
 
 void serialEvent(Serial port) {
-    if (port == feather) { 
-        String inString = port.readStringUntil('\n'); 
+    if (port == feather) {
+        // TODO : 
+        // do something
+        //String inString = port.readStringUntil('\n'); 
     }
 }
 
 
-// 
+// check oscMessage 
 void oscEvent(OscMessage incommingMessage) {
     if(incommingMessage.checkAddrPattern("/accel"))     tmpAccelCount++;
     if(incommingMessage.checkAddrPattern("/left"))      tmpHandlingCount--;
     if(incommingMessage.checkAddrPattern("/right"))     tmpHandlingCount++;
 }
 
+// only works when manualControl enable
 void mouseMoved(){
-    if(bMouseControlEnabled) handlingValue = (int)constrain(map(mouseX, 0, width, -100, 100), -100, 100); 
+    if(bManualControlEnabled) handlingValue = (int)constrain(map(mouseX, 0, width, -100, 100), -100, 100); 
 }

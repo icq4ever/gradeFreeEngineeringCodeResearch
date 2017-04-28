@@ -11,8 +11,8 @@ int lastSentTimer;
 void setup(){
     size(100, 100);
     
-    oscP5 = new OscP5(this, 9001);
-    target = new NetAddress("192.168.0.255", 9000);
+    oscP5 = new OscP5(this, 8001);
+    target = new NetAddress("192.168.100.255", 8000);
     
     font = loadFont("ShareTechMono-Regular-14.vlw");
     textFont(font);
