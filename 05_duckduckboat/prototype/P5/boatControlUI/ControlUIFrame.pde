@@ -3,7 +3,7 @@
 */
 
 class ControlUIFrame extends PApplet {
-    int w, h;
+    int w, h; 
     PApplet parent;
     ControlP5 cp5;
     Textarea description;

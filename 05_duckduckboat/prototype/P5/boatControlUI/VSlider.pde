@@ -2,7 +2,7 @@
     vertical slider UI (output only) 
  */
 
-class VSlider {
+class VSlider { 
     float w, h;
     float min, max;
     float normalizedValue;        // normalized value (0 ~ 1);

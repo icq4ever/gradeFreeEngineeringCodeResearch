@@ -2,7 +2,7 @@
     digital UI (output only) 
 */
 
-class DigitalUI{
+class DigitalUI{ 
     boolean bOn;
     PImage icon;
     PFont debugFont;

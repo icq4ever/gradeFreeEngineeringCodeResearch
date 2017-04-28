@@ -37,13 +37,14 @@ int throttleValue;  // -100 ~ 100
 int handlingValue;  // -100 ~ 100
 int keyThrottleValue = 0;
 boolean bManualControlEnabled = false;
-boolean bKillEnabled = true;
+boolean bKillEnabled = true; 
 
 
 
 PFont font, smallFont;
 
 int lastGoCmdTimer, lastBackCmdTimer, lastLeftCmdTimer, lastRightCmdTimer, lastLORASentTimer;
+int lastLRCmdCheckedTimer;
 
 int accelCountBuffer[] = new int[10];
 int handlingCountBuffer[] = new int[10];
@@ -52,6 +53,10 @@ int tmpAccelCount, tmpHandlingCount;
 int tmpGoBackCount;
 int lastMessageCountCheckedTimer;
 int bufferIndex = 0;
+
+int tilt_angle =0;
+
+int duck_mode = 1;
 
 void settings(){
     size(300, 300);   
@@ -67,12 +72,11 @@ void setup() {
     
     cf = new ControlUIFrame(this, 300, 300, "Control");
     font = loadFont("ShareTechMono-Regular-24.vlw");
-    smallFont = loadFont("ShareTechMono-Regular-14.vlw");
+    smallFont = createFont("arial", 14);
     
     
     oscP5 = new OscP5(this, 8000);
-    remoteClients = new NetAddress("192.168.100.255", 8001); //????????????????????????????????????????????????????????????????????????????????????????????
-
+    remoteClients = new NetAddress("192.168.100.255", 8001);
     for (int i=0; i<Serial.list().length; i++) {
         println("[" + i + "] : " + Serial.list()[i]);
     }
@@ -84,7 +88,6 @@ void setup() {
         
     }
     controlUI = new TwoDimensionUI("controlUI", 300);    
-    //feather = new Serial(this, "COM11", 9600);
     feather = new Serial(this, Serial.list()[1], 9600);
     
     tmpAccelCount = 0;
@@ -119,11 +122,19 @@ void draw() {
         accelCount += accelCountBuffer[i];
         handlingCount  += handlingCountBuffer[i];
     }
+    
+    if (duck_mode == 1) {
+        accelCount = (int)map(tilt_angle,0,90,0,40);
+    }
 
     pushStyle();
     textFont(smallFont);
+    println(handlingCountBuffer.length + " : " + handlingCount);
     text("accel     : " +  accelCount, 10, 20);
     text("handling  : " +  handlingCount, 10, 40);
+    
+    //text(-10, 10, 40);
+    
     popStyle();
 
 
@@ -218,14 +229,15 @@ void control() {
     } else {
         throttleValue = (int)constrain(map(accelCount, -50, 50, -100, 100), -100, 100);
         handlingValue = (int)constrain(map(handlingCount, -10, 10, -100, 100), -100, 100);
-        
-        if(handlingValue < 0)            handlingValue++;
-        else if(handlingValue > 0)       handlingValue--;
     }
 
     if(bKillEnabled){
         throttleValue = 0;
         handlingValue = 0;
+    } 
+    
+    if(millis() - lastLRCmdCheckedTimer > 100){
+      handlingValue = 0;
     }
     
     PVector temp = new PVector(handlingValue, throttleValue);
@@ -243,10 +255,37 @@ void serialEvent(Serial port) {
 
 // check oscMessage 
 void oscEvent(OscMessage incommingMessage) {
-    if(incommingMessage.checkAddrPattern("/gofwd"))     tmpAccelCount++;
-    if(incommingMessage.checkAddrPattern("/left"))      tmpHandlingCount--;
-    if(incommingMessage.checkAddrPattern("/right"))     tmpHandlingCount++;
+    //if(incommingMessage.checkAddrPattern("/gofwd"))     tmpAccelCount++;
+    
+    // if address is /gofwd and id is "sy"
+    // 
+    
+    if(incommingMessage.checkAddrPattern("/gofwd"))
+    {
+      if(duck_mode == 1)
+        {
+          tilt_angle = incommingMessage.get(1).intValue();
+          
+        }
+        else
+        {
+          tmpAccelCount++;
+        }
+    }
+    
+    if(incommingMessage.checkAddrPattern("/left")) {
+      tmpHandlingCount--;
+      lastLRCmdCheckedTimer = millis();
+    }
+    if(incommingMessage.checkAddrPattern("/right"))  {
+      tmpHandlingCount++;
+      lastLRCmdCheckedTimer = millis();
+    }
     if(incommingMessage.checkAddrPattern("/goback"))    tmpAccelCount=tmpAccelCount - 4;
+    
+    if(incommingMessage.checkAddrPattern("/standby"))  duck_mode = 0;
+    if(incommingMessage.checkAddrPattern("/patience"))  duck_mode = 1;
+    
 }
 
 // only works when manualControl enable

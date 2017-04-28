@@ -1,4 +1,4 @@
-class TwoDimensionUI{
+class TwoDimensionUI{ 
     float w, h;
     PVector min, max;
     PVector rawValue;
