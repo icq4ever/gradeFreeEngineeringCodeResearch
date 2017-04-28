@@ -49,6 +49,7 @@ int accelCountBuffer[] = new int[10];
 int handlingCountBuffer[] = new int[10];
 int accelCount, handlingCount;
 int tmpAccelCount, tmpHandlingCount;
+int tmpGoBackCount;
 int lastMessageCountCheckedTimer;
 int bufferIndex = 0;
 
@@ -69,8 +70,8 @@ void setup() {
     smallFont = loadFont("ShareTechMono-Regular-14.vlw");
     
     
-    oscP5 = new OscP5(this, 9000);
-    remoteClients = new NetAddress("192.168.0.255", 9001);
+    oscP5 = new OscP5(this, 8000);
+    remoteClients = new NetAddress("192.168.100.255", 8001); //????????????????????????????????????????????????????????????????????????????????????????????
 
     for (int i=0; i<Serial.list().length; i++) {
         println("[" + i + "] : " + Serial.list()[i]);
@@ -83,7 +84,13 @@ void setup() {
         
     }
     controlUI = new TwoDimensionUI("controlUI", 300);    
+    //feather = new Serial(this, "COM11", 9600);
     feather = new Serial(this, Serial.list()[1], 9600);
+    
+    tmpAccelCount = 0;
+    tmpHandlingCount = 0;
+    tmpGoBackCount = 0;
+    
 }
 
 void draw() {
@@ -94,7 +101,9 @@ void draw() {
     accelCount = handlingCount = 0;
 
     // fill buffer
-    if(millis() - lastMessageCountCheckedTimer > 100){
+    if(millis() - lastMessageCountCheckedTimer > 50){
+    //    if(millis() - lastMessageCountCheckedTimer > 100){
+
         accelCountBuffer[bufferIndex] = tmpAccelCount;
         handlingCountBuffer[bufferIndex] = tmpHandlingCount;
 
@@ -209,12 +218,15 @@ void control() {
     } else {
         throttleValue = (int)constrain(map(accelCount, -50, 50, -100, 100), -100, 100);
         handlingValue = (int)constrain(map(handlingCount, -10, 10, -100, 100), -100, 100);
+        
+        if(handlingValue < 0)            handlingValue++;
+        else if(handlingValue > 0)       handlingValue--;
     }
 
     if(bKillEnabled){
         throttleValue = 0;
         handlingValue = 0;
-    } 
+    }
     
     PVector temp = new PVector(handlingValue, throttleValue);
     controlUI.update(temp);     // UI update
@@ -231,9 +243,10 @@ void serialEvent(Serial port) {
 
 // check oscMessage 
 void oscEvent(OscMessage incommingMessage) {
-    if(incommingMessage.checkAddrPattern("/accel"))     tmpAccelCount++;
+    if(incommingMessage.checkAddrPattern("/gofwd"))     tmpAccelCount++;
     if(incommingMessage.checkAddrPattern("/left"))      tmpHandlingCount--;
     if(incommingMessage.checkAddrPattern("/right"))     tmpHandlingCount++;
+    if(incommingMessage.checkAddrPattern("/goback"))    tmpAccelCount=tmpAccelCount - 4;
 }
 
 // only works when manualControl enable
