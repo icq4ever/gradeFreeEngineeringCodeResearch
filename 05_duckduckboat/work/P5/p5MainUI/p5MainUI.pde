@@ -37,7 +37,7 @@ PImage duckImage, waterImage;
 
 int throttleValue;  // -100 ~ 100
 int handlingValue;  // -100 ~ 100
-PFont font, smallFont;
+PFont font, smallFont, titleFont;
 
 int lastLORASentTimer;
 int lastLRCmdCheckedTimer;
@@ -53,12 +53,23 @@ int bufferIndex = 0;
 int tilt_angle = 0;
 int duck_mode = 0;
 
+
 // member osc status
 boolean bGotMessage[] = new boolean[5];
 int lastGotFWDMessageTimer[] = new int[5];
+String memberName[] = new String[5];
+String modeName[] = new String[5];
+boolean bMainRole[] = new boolean[5];
+color backgroundColors[] = new color[5];
+color bgColor = #000000;
+color lastBGColor = #000000;
+int lastBGChangedTimer;
+int maxSpeed;
+boolean bKilled = false;
 
 // for debugging
-boolean bDebugOn = false;
+boolean bDebugOn = true;
+boolean bMainRoleDisplay = false;
 String messageAddr = "";
 float messageValue = 0;
 
@@ -70,8 +81,10 @@ void setup() {
     waterImage = loadImage("water.png");
     
     font = loadFont("ShareTechMono-Regular-48.vlw");
-    smallFont = createFont("arial", 14);
+    smallFont = loadFont("ShareTechMono-Regular-24.vlw");
+    titleFont = loadFont("Seravek-Bold-120.vlw");
     
+    maxSpeed = 50;
     
     oscP5 = new OscP5(this, 8000);
     photons = new NetAddress("192.168.100.255", 8001);
@@ -85,10 +98,9 @@ void setup() {
     for(int i=0; i<accelCountBuffer.length; i++)    {
         accelCountBuffer[i] = 0;
         handlingCountBuffer[i] = 0;
-        
     }
     
-    controlUI = new TwoDimensionUI("controlUI", 300);    
+    controlUI = new TwoDimensionUI("controlUI", 400);    
     feather = new Serial(this, Serial.list()[1], 9600);
     
     tmpAccelCount = 0;
@@ -98,11 +110,51 @@ void setup() {
     for(int i=0; i<5; i++){
         bGotMessage[i] = false;
         lastGotFWDMessageTimer[i] = millis();
+        bMainRole[i] = false;
     }   
+    
+    modeName[0] = "STANDBY";
+    modeName[1] = "TRUST";
+    modeName[2] = "CRUSH";
+    modeName[3] = "CUTE";
+    modeName[4] = "SYNC";
+    
+    memberName[0] = "kyuhan";
+    memberName[1] = "hongchul";
+    memberName[2] = "hojun";
+    memberName[3] = "seyoon";
+    memberName[4] = "yongjin";
+    
+    backgroundColors[0] = #000000;
+    backgroundColors[1] = #7DFF15;
+    backgroundColors[2] = #FF15C9;
+    backgroundColors[3] = #FFD815;
+    backgroundColors[4] = #15DEFF;
+    
+    lastBGChangedTimer = millis();
+    
 }
 
 void draw() {
-    background(0);
+    if(millis() - lastBGChangedTimer > 300){
+        lastBGColor = bgColor;
+        bgColor = backgroundColors[duck_mode];
+        lastBGChangedTimer = millis();
+    }
+    
+    background(lerpColor(lastBGColor, bgColor, map(millis() - lastBGChangedTimer, 0, 200, 0.f, 1.f)));
+    
+    
+    
+    // mode display : deprecated due to set backgroundColor
+    //pushStyle();
+    //{
+    //    textFont(titleFont);
+    //    fill(#FFFF00);
+    //    textAlign(CENTER, BOTTOM);
+    //    text(modeName[duck_mode], width/2, 180);
+    //}
+    //popStyle();
     
     switch (duck_mode){
         case 0:    // standby
@@ -111,12 +163,14 @@ void draw() {
         break;
         
         case 1:    // trust
-            accelCount = (int)map(tilt_angle,0,90,0,40);
-            throttleValue = (int)constrain(map(accelCount, -50, 50, -100, 100), -100, 100);
+            int modeOneSpeed = (int)map(tilt_angle,0,90,0,80) + accelCount;
+                
+            throttleValue = (int)constrain(map(modeOneSpeed, -50, 50, -100, 100), -100, 100); 
             handlingValue = (int)constrain(map(handlingCount, -20, 20, -100, 100), -100, 100);
         break;
         
         case 2:    // crush
+            // more throttle   
             throttleValue = (int)constrain(map(accelCount, -50, 50, -100, 100), -100, 100);
             handlingValue = (int)constrain(map(handlingCount, -20, 20, -100, 100), -100, 100);
         break;
@@ -132,15 +186,18 @@ void draw() {
         break;    
     }
     
+    if(throttleValue > maxSpeed)        throttleValue = maxSpeed;
+    
     PVector temp = new PVector(handlingValue, throttleValue);
     controlUI.update(temp);     // UI update
-    controlUI.draw(width/2, height/2);
+    controlUI.draw(width/2, height-320);
     
     
     accelCount = handlingCount = 0;
     
     // fill buffer
     if(millis() - lastMessageCountCheckedTimer > 50){
+        
         accelCountBuffer[bufferIndex] = tmpAccelCount;
         handlingCountBuffer[bufferIndex] = tmpHandlingCount;
 
@@ -159,6 +216,15 @@ void draw() {
     
     if(millis() - lastLRCmdCheckedTimer > 100)       handlingValue = 0;
     
+    if(bKilled)    {
+        throttleValue = 0;
+        handlingValue = 0;
+    }
+    
+    
+    
+    println(throttleValue + " : " + handlingValue );
+    
     // send to LoRa
     if (millis() - lastLORASentTimer > 100) send2LoRA();
 
@@ -170,22 +236,32 @@ void draw() {
 
 
 void drawForwardMessageIndicator(){
+    float roundSize = 180;
+    float originHeight = 200;
+    float alignDistance = 300;
+    
     for(int i=0; i< lastGotFWDMessageTimer.length; i++){
+        pushStyle();
+        fill(#FFFFFF);
+        textAlign(CENTER);
+        textFont(smallFont);
+        text(memberName[i], width/2 - (2-i)*alignDistance, originHeight-roundSize/2-40);
+        popStyle();
+        
+        
         pushStyle();
         fill(#FF0000);
         noStroke();
-        ellipse(width/2 - (i-2)*200, 100, 100, 100);
+        ellipse(width/2 - (2-i)*alignDistance, originHeight, roundSize, roundSize);
         popStyle();
         
         if(millis() - lastGotFWDMessageTimer[i] < 50){
             pushStyle();
             fill(#00FF00);
-            ellipse(width/2 - (i-2)*200, 100, 100, 100);
+            ellipse(width/2 - (2-i)*alignDistance, originHeight, roundSize, roundSize);
             
             popStyle();
         }
-        
-        
     }
 }
 
@@ -223,35 +299,46 @@ void oscEvent(OscMessage incommingMessage) {
 	if(incommingMessage.checkAddrPattern("/gofwd/kh")){
 		messageAddr = "/gofwd/kh"; 
 		messageValue = incommingMessage.get(0).floatValue();
-		tmpAccelCount += messageValue;
+		
+        if(duck_mode == 2)    tmpAccelCount = tmpAccelCount + 2;
+        else                  tmpAccelCount += messageValue;
+        
+        
         lastGotFWDMessageTimer[0] = millis();        
 	}
 
 	if(incommingMessage.checkAddrPattern("/gofwd/hc")){
 		messageAddr = "/gofwd/hc"; 
 		messageValue = incommingMessage.get(0).floatValue();
-		tmpAccelCount += messageValue;
+		if(duck_mode == 2)    tmpAccelCount = tmpAccelCount + 2;
+        else                  tmpAccelCount += messageValue;
         lastGotFWDMessageTimer[1] = millis();
 	}
 
 	if(incommingMessage.checkAddrPattern("/gofwd/hj")){
 		messageAddr = "/gofwd/hj"; 
 		messageValue = incommingMessage.get(0).floatValue();
-		tmpAccelCount += messageValue;
+		if(duck_mode == 2)    tmpAccelCount = tmpAccelCount + 2;
+        else                  tmpAccelCount += messageValue;
         lastGotFWDMessageTimer[2] = millis();
 	}
 
 	if(incommingMessage.checkAddrPattern("/gofwd/sy")){
 		messageAddr = "/gofwd/sy"; 
 		messageValue = incommingMessage.get(0).floatValue();
-		tmpAccelCount += messageValue;
+		if(duck_mode == 2)    tmpAccelCount = tmpAccelCount + 2;
+        else                  tmpAccelCount += messageValue;
+        
         lastGotFWDMessageTimer[3] = millis();
 	}
 
 	if(incommingMessage.checkAddrPattern("/gofwd/yj")){
 		messageAddr = "/gofwd/yj"; 
 		messageValue = incommingMessage.get(0).floatValue();
-		tmpAccelCount += messageValue;
+		if(duck_mode == 2)    tmpAccelCount = tmpAccelCount + 2;
+        else                  tmpAccelCount += messageValue;
+        
+        if(duck_mode == 1)    tilt_angle = (int)messageValue;
         lastGotFWDMessageTimer[4] = millis();
 	}
 
@@ -280,6 +367,8 @@ void oscEvent(OscMessage incommingMessage) {
 		messageAddr = "/goback"; 
 		messageValue = incommingMessage.get(0).floatValue();
 		tmpAccelCount=tmpAccelCount - 4;
+        //if(duck_mode == 1)    tmpAccelCount = tmpAccelCount - 5;
+
 	}
 
     
@@ -314,9 +403,47 @@ void oscEvent(OscMessage incommingMessage) {
         messageValue = incommingMessage.get(0).floatValue();
         duck_mode = 4;
     }
+    
+    
+    /* ========================================================== etc  ================= */
+    if(incommingMessage.checkAddrPattern("/kill")) {
+        messageAddr = "/kill";
+        messageValue = incommingMessage.get(0).floatValue();
+        //toP5Main("/kill", value);
+        if(messageValue == 1.f)        bKilled = true;
+        else                            bKilled = false;
+    }
+    
+    if(incommingMessage.checkAddrPattern("/setmaxspeed")) {
+        messageAddr = "/setmaxspeed";
+        messageValue = incommingMessage.get(0).floatValue();
+        maxSpeed = (int)messageValue;
+        //toP5Main("/setmaxSpeed", value);
+    }
 }
 
 void debuggingPrint(String addr, float value){
+    pushStyle();
+    fill(#000000);
+    noStroke();
+    rect(15, height/2-60, 500, 80); 
+    popStyle();
+    
+    pushStyle();
+    textFont(font);
+    
+    fill(#00FFFF);
+    text("maxSpeed : " + maxSpeed, 30, height/2);
+    //text(-10, 10, 40);
+    popStyle();
+    
+    
+    pushStyle();
+    fill(#000000);
+    noStroke();
+    rect(15, height-180, 600, 150); 
+    popStyle();
+    
     pushStyle();
     textFont(font);
     

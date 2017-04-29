@@ -13,6 +13,9 @@ class TwoDimensionUI{
     PFont interfaceFont;
     PFont debugFont;
     
+    float CROSS_WIDTH = 80;
+    float CROSS_LENGTH = 240;
+    
     TwoDimensionUI(String _title, float _size){
         title = _title;
         rawValue = new PVector(0, 0);
@@ -56,17 +59,27 @@ class TwoDimensionUI{
 
             pushStyle();
             rectMode(CORNER);
+            
+            // background
+            fill(#000000);
+            noStroke();
+            rect(-CROSS_WIDTH/2, -CROSS_WIDTH/2-5, CROSS_WIDTH, -size/2+graphMargin);
+            rect(-CROSS_WIDTH/2,  CROSS_WIDTH/2+5, CROSS_WIDTH,  size/2-graphMargin);
+            
+            rect( CROSS_WIDTH/2+5, -CROSS_WIDTH/2,  size/2-graphMargin, CROSS_WIDTH);
+            rect(-CROSS_WIDTH/2-5, -CROSS_WIDTH/2, -size/2+graphMargin, CROSS_WIDTH);
+            
+            
             fill(#00FF00);
             noStroke();
-            // if(normalizedValue.x > 0)
             // handling
-            if(normalizedValue.x > 0)    rect( 15, -10, map(normalizedValue.x, -1, 1, -size/2+graphMargin, size/2-graphMargin), 20);
-            else                         rect(-15, -10, map(normalizedValue.x, -1, 1, -size/2+graphMargin, size/2-graphMargin), 20);
+            if(normalizedValue.x > 0)    rect( CROSS_WIDTH/2+5, -CROSS_WIDTH/2, map(normalizedValue.x, -1, 1, -size/2+graphMargin, size/2-graphMargin), CROSS_WIDTH);
+            else                         rect(-CROSS_WIDTH/2-5, -CROSS_WIDTH/2, map(normalizedValue.x, -1, 1, -size/2+graphMargin, size/2-graphMargin), CROSS_WIDTH);
 
             fill(#FFFF00);
             // throttling
-            if(normalizedValue.y > 0)    rect(-10,  15, 20, map(normalizedValue.y, -1, 1, -size/2+graphMargin, size/2-graphMargin));
-            else                         rect(-10, -15, 20, map(normalizedValue.y, -1, 1, -size/2+graphMargin, size/2-graphMargin));
+            if(normalizedValue.y > 0)    rect(-CROSS_WIDTH/2,  CROSS_WIDTH/2+5, CROSS_WIDTH, map(normalizedValue.y, -1, 1, -size/2+graphMargin, size/2-graphMargin));
+            else                         rect(-CROSS_WIDTH/2, -CROSS_WIDTH/2-5, CROSS_WIDTH, map(normalizedValue.y, -1, 1, -size/2+graphMargin, size/2-graphMargin));
             popStyle();
             
             // draw rects
@@ -74,19 +87,12 @@ class TwoDimensionUI{
             noFill();
             stroke(#FFFFFF);
             
-            rect(-10, -15, 20, -size/2+graphMargin);
-            rect(-10,  15, 20,  size/2-graphMargin);
+            rect(-CROSS_WIDTH/2, -CROSS_WIDTH/2-5, CROSS_WIDTH, -size/2+graphMargin);
+            rect(-CROSS_WIDTH/2,  CROSS_WIDTH/2+5, CROSS_WIDTH,  size/2-graphMargin);
             
-            rect( 15, -10,  size/2-graphMargin, 20);
-            rect(-15, -10, -size/2+graphMargin, 20);
+            rect( CROSS_WIDTH/2+5, -CROSS_WIDTH/2,  size/2-graphMargin, CROSS_WIDTH);
+            rect(-CROSS_WIDTH/2-5, -CROSS_WIDTH/2, -size/2+graphMargin, CROSS_WIDTH);
             popStyle();
-            
-            //pushStyle();
-            //noFill();
-            //stroke(#FFFFFF);
-            //rectMode(CENTER);
-            //rect(0, 0, size, size);
-            //popStyle();
         }
         popMatrix();
         
