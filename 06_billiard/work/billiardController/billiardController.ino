@@ -1,28 +1,44 @@
 #include <Wire.h>
 #include <PCA9685.h>
 
+#define PIN_SOLENOID	A0
+#define PIN_LOCK		A1
+#define PIN_BURST		A2
+#define PIN_SETTING		7
+
+bool bLock 		= true;
+bool bBurstBtnOn = false;
+bool bSettingBtnOn = false;
+bool bLastSettingBtnOn = false;
+bool bModeDisplayOn = false;
+
+bool mode6LEDStatus = false;
+unsigned long lastMode6LEDToggledTimer;
+
+int mode = 0;
+
 PCA9685 ledDriver; 
 
 unsigned short num;
 short raw_data[5]={ 0, };
-	short sub_os_data[5];
-	signed short ret;
-	short act_os_d[4]={ 0x03FF, 0x03FF, 0x03FF, 0x03FF};
+short sub_os_data[5];
+signed short ret;
+short act_os_d[4]={ 0x03FF, 0x03FF, 0x03FF, 0x03FF};
 
-	/////////////// Constant parameters ///////
-	const int 	STATE_ONE 	 		= 1;
-	const int 	STATE_TWO 	    	= 2;
-	const int 	STATE_THREE 		= 3;
-	const short OVER_FLOW_DATA 		= 4095;
-	const int 	DIR_RIGHT 			= 0x8;
-	const int 	DIR_LEFT			= 0x4;
-	const int 	DIR_TOP 			= 0x2;
-	const int 	DIR_BOTTOM			= 0x1;
-	const int 	SPEED_HIGH			= 0x2;
-	const int 	SPEED_MID			= 0x1;
+/////////////// Constant parameters ///////
+const int 	STATE_ONE 	 		= 1;
+const int 	STATE_TWO 	    	= 2;
+const int 	STATE_THREE 		= 3;
+const short OVER_FLOW_DATA 		= 4095;
+const int 	DIR_RIGHT 			= 0x8;
+const int 	DIR_LEFT			= 0x4;
+const int 	DIR_TOP 			= 0x2;
+const int 	DIR_BOTTOM			= 0x1;
+const int 	SPEED_HIGH			= 0x2;
+const int 	SPEED_MID			= 0x1;
 
-	const int 	COUNTS_HIGH_SP		= 6;        //Edit this value for tuning sensitivity of high speed sensing
-	const int 	COUNTS_MID_SP		= 10;       //Edit this value for tuning sensitivity of medium speed sensing
+const int 	COUNTS_HIGH_SP		= 6;        //Edit this value for tuning sensitivity of high speed sensing
+const int 	COUNTS_MID_SP		= 10;       //Edit this value for tuning sensitivity of medium speed sensing
 
 struct gs_params{
 	//// Temporal parameters for Direction Judgement ////
@@ -61,7 +77,6 @@ void clearGSparams(struct gs_params *p_gs) {
 	p_gs->speed_counts= 0;
 	p_gs->gs_state = STATE_ONE;
 }
-
 
 void initGSparams(struct gs_params *p_gs){
 	clearGSparams(p_gs);
@@ -354,7 +369,7 @@ void I2C_write(unsigned char add,unsigned char reg,unsigned char data) {
 
 unsigned short RGB_Cnt=0;
 unsigned short RGB_Cnt2=0;
-boolean RGB_Plus=true;
+bool RGB_Plus=true;
 void RGB_LED() {
 	if (RGB_Plus) 	RGB_Cnt++;
 	else 			RGB_Cnt--; 
@@ -369,9 +384,10 @@ void RGB_LED() {
 	}
 }
 
+/// WORKING INDICATOR GREEN LED DIMMING ///
 unsigned short RGBG_Cnt  = 0;
 unsigned short RGBG_Cnt2 = 0;
-boolean RGBG_Plus = true;
+bool RGBG_Plus = true;
 void RGB_LED_GREEN_DIMMING(int _maxBrightness){
 	if(RGBG_Plus)	RGBG_Cnt++;
 	else 			RGBG_Cnt--;
@@ -384,6 +400,23 @@ void RGB_LED_GREEN_DIMMING(int _maxBrightness){
 		RGBG_Plus = false;
 	} else if(RGBG_Cnt<1){
 		RGBG_Plus = true;
+	}
+}
+
+/// WORKING INDICATOR GREEN LED DIMMING ///
+unsigned short RGBR_Cnt  = 0;
+unsigned short RGBR_Cnt2 = 0;
+bool RGBR_Plus = true;
+void RGB_LED_RED_DIMMING(int _maxBrightness){
+	if(RGBR_Plus)	RGBR_Cnt++;
+	else 			RGBR_Cnt--;
+
+	ledDriver.setLEDDimmed(1, RGBR_Cnt);
+	
+	if(RGBR_Cnt>= _maxBrightness){
+		RGBR_Plus = false;
+	} else if(RGBR_Cnt<1){
+		RGBR_Plus = true;
 	}
 }
 
@@ -402,6 +435,19 @@ void LED_Blink() {
 	delay(delay_value); 
 }
 
+void LED_BlinkShort() {
+	unsigned char i;
+	for(i=3; i<15; i++)  {
+		ledDriver.setLEDOn(i); 
+	}
+	delay(100);
+
+	for(i=3; i<15; i++)  {
+		ledDriver.setLEDOff(i); 
+	}
+	delay(100); 
+}
+
 void LED_Off() {
 	unsigned char i;
 	for(i=3; i<15; i++)  {
@@ -411,7 +457,15 @@ void LED_Off() {
 
 struct gs_params st_gs;
 void setup() {
-  ////////IO Init
+	// controller pin setting
+	pinMode(PIN_SOLENOID, OUTPUT);
+	pinMode(PIN_BURST, INPUT_PULLUP);
+	pinMode(PIN_LOCK, INPUT_PULLUP);
+
+	digitalWrite(PIN_SOLENOID, LOW);
+
+
+  	////////IO Init
 	pinMode(12, INPUT_PULLUP);  
 	pinMode(13, INPUT_PULLUP);  
 	pinMode(10, OUTPUT);               
@@ -448,6 +502,46 @@ void setup() {
 }
 
 void loop() {
+	// button check
+	if(!digitalRead(PIN_LOCK))		{
+		// Serial.println("PIN LOCKED!");
+		bLock = true;
+		delay(10);
+	} else {
+		bLock = false;
+	}
+
+	if(!digitalRead(PIN_BURST))		{
+		// Serial.println("BURST ON!");
+		bBurstBtnOn = true;
+		delay(10);
+	} else {
+		bBurstBtnOn = false;
+	}
+
+	if(!digitalRead(PIN_SETTING))	bSettingBtnOn = true;
+	else 							bSettingBtnOn = false;
+
+	if(!bLastSettingBtnOn && bSettingBtnOn){
+		mode++;
+		if(mode >= 6)	mode = 0;
+
+		modeSetDisplay();
+	}
+
+	bLastSettingBtnOn = bSettingBtnOn;
+
+
+
+	// if locked && burst button Pressed!
+	// if(!bLock){
+		if(bBurstBtnOn)		shoot();
+		else 				digitalWrite(PIN_SOLENOID, LOW);
+	// }
+
+
+
+
 	////Getting Gesture Data from Sensor
 	unsigned char i;
 	unsigned short GD0=0,GD1=0,GD2=0,GD3=0,GD4=0;
@@ -549,21 +643,21 @@ void loop() {
 	}
 
 	if (ret&0x01) {
-		Serial.print("Bottom, ");
+		// Serial.print("Bottom, ");
 		switch (ret&0xF0) {
 			case 0x20:
 				ledDriver.setLEDOn(11);  
 				ledDriver.setLEDOn(10); 
-				Serial.println("High");
+				// Serial.println("High");
 				break;  
 			
 			case 0x10:
 				ledDriver.setLEDOn(10); 
-				Serial.println("Mid");
+				// Serial.println("Mid");
 				break;  
 			
 			default:
-				Serial.println("Low");
+				// Serial.println("Low");
 				break;
 		}
 
@@ -571,21 +665,21 @@ void loop() {
 	}
 
 	if (ret&0x02) {
-		Serial.print("Top,    ");
+		// Serial.print("Top,    ");
 		switch (ret&0xF0) {
 			case 0x20:
 				ledDriver.setLEDOn(3);  
 				ledDriver.setLEDOn(4); 
-				Serial.println("High");
+				// Serial.println("High");
 				break;  
 			
 			case 0x10:
 				ledDriver.setLEDOn(4);
-				Serial.println("Mid"); 
+				// Serial.println("Mid"); 
 				break;  
 			
 			default:
-				Serial.println("Low");
+				// Serial.println("Low");
 				break;
 		}
 
@@ -593,21 +687,21 @@ void loop() {
 	}
 
 	if (ret&0x04) {
-		Serial.print("Left,   ");
+		// Serial.print("Left,   ");
 		switch (ret&0xF0) {
 			case 0x20:
 				ledDriver.setLEDOn(6);  
 				ledDriver.setLEDOn(7); 
-				Serial.println("High");
+				// Serial.println("High");
 				break;  
 			
 			case 0x10:
 				ledDriver.setLEDOn(7); 
-				Serial.println("Mid");
+				// Serial.println("Mid");
 				break;  
 			
 			default:
-				Serial.println("Low");
+				// Serial.println("Low");
 				break;
 		}
 
@@ -615,21 +709,25 @@ void loop() {
 	}
 
 	if (ret&0x08) {
-		Serial.print("Right,  ");
+		if(!bLock)	 shoot();								//////////////////// shoot!
+		else		 digitalWrite(PIN_SOLENOID, LOW);
+
+		// Serial.print("Right,  ");
 		switch (ret&0xF0) {
 			case 0x20:
 				ledDriver.setLEDOn(12);  
 				ledDriver.setLEDOn(13);
-				Serial.println("High"); 
+				// Serial.println("High"); 
 				break;  
 			
 			case 0x10:
 				ledDriver.setLEDOn(13); 
-				Serial.println("Mid");
+				// Serial.println("Mid");
 				break;  
 			
 			default:
-				Serial.println("Low");
+				// Serial.println("Low");
+				
 				break;
 		}
 
@@ -638,8 +736,33 @@ void loop() {
 
 	/////Flashing RGB Led
 	// RGB_LED(); 
-	RGB_LED_GREEN_DIMMING(20);
-
+	if(!bLock)	 {	// unlock
+		RGB_LED_RED_DIMMING(10);
+		ledDriver.setLEDDimmed(0, 0);
+	} else 		 {	// lock
+		RGB_LED_GREEN_DIMMING(30);
+		ledDriver.setLEDDimmed(1, 0);
+	}
 
 	delay(10);
+}
+
+void modeSetDisplay(){
+	for(int i=0; i<mode+1; i++){
+		LED_BlinkShort();
+	}
+}
+
+void shoot(){
+	if(mode != 5){
+		digitalWrite(PIN_SOLENOID, HIGH);
+		delay(25 + mode * 10);
+		digitalWrite(PIN_SOLENOID, LOW);
+		delay(1000);
+	} else {
+		digitalWrite(PIN_SOLENOID, HIGH);
+		delay(1000);
+		digitalWrite(PIN_SOLENOID, LOW);
+		delay(1000);
+	}
 }

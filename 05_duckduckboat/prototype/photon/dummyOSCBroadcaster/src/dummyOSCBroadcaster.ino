@@ -1,24 +1,25 @@
 /*
     dummyOSCBroadcaster
+
+    braodcasting message with 10ms delay, repeatly
 */
 
 
 #include "simple-OSC.h"
 
 SYSTEM_MODE(MANUAL);
-#define LED             D7      //indicator, Grove - LED is connected with D4 of Arduino
+SYSTEM_THREAD(ENABLED);
 
+#define LED             D7      //indicator, Grove - LED is connected with D4 of Arduino
 UDP udp;
 
 IPAddress outIP(192, 168, 100, 255);        // braodcast ip addess
 unsigned int outPort = 8000;                // port
 
-volatile bool ledState = LOW;   
+unsigned int count;
 
-#define ADDRSIZE	50
-String addressbook[ADDRSIZE];
-
-unsigned long count = 0;
+bool ledState = LOW;   
+unsigned long lastLEDStateChangedTimer;
 
 void setup() {
 	Serial.begin(115200);
@@ -42,88 +43,35 @@ void setup() {
 
 	pinMode(LED, OUTPUT);
 
-	// addressbook = new String[10];
-
 	Serial.println("OSC address patterns... : ");
-
-	// for(int i=0; i< sizeof(addressbook) / sizeof(addressbook[0]); i++){
-		// String tmpName = "/GFE_2";
-		// if(i<10)	addressbook[i] = tmpName + "0" + String(i);
-		// else		addressbook[i] = tmpName + String(i);
-		// Serial.println(addressbook[i]);
-	// }
 }
 
 void loop() {
-    digitalWrite(LED, HIGH);//Update the state of the indicator
-    
-    // for(int i=0; i<sizeof(addressbook) / sizeof(addressbook[0]); i++){
-    // 	OSCMessage message(addressbook[i]);
-    // 	message.addInt(millis() + i);
-    // 	message.send(udp, outIP, outPort);
-    // 	delay(10);
-    // }
+	count++;
 
-    
-    	OSCMessage message("/GFE_1");
-    	// for(int i=0; i<sizeof(addressbook) / sizeof(addressbook[0]); i++){
-    		message.addString(double2String(count));
-    	// }
-    	message.send(udp, outIP, outPort);
-    	count++;
-    	delay(10);
-    
+	sendOSCMessage("/GFE_1", count);
+	Particle.process();
 
-    digitalWrite(LED, LOW);
+	// LED status 
+	if(WiFi.ready())	blinkingLED(50);
+	else 				blinkingLED(200);
 
-   //  if(WiFi.ready()){
-   //  	digitalWrite(D7, HIGH);
-   //  } else {
-   //  	udp.endPacket();
-   //  	udp.stop();
-   //  	digitalWrite(D7, LOW);
-
-   //  	WiFi.disconnect();
-
-   //  	WiFi.off();
-   //  	delay(5000);
-   //  	WiFi.on();
-
-   //  	WiFi.connect();
-   //  	Serial.print("connecting");
-   //  	while(WiFi.connecting()){
-   //  		Serial.print("waiting connection... ");
-   //  		delay(1000);
-   //  	}
-   //  	Serial.println();
-
-   //  	while(!WiFi.ready()){
-   //  		Particle.process();	
-   //  		Serial.print(".");
-   //  		delay(100);
-   //  	}
-   //  	Particle.process();
-
-
-   //  	Serial.println();
-   //  	Serial.println("WiFi fully ready.");
-
-   //  	Particle.process();
-   //  	Serial.print("PING returns : ");
-   //  	Serial.println(WiFi.ping(WiFi.gatewayIP()));
-
-
-   //  	Serial.println("========");
-   //  	Serial.print("local IP: \t");
-   //  	Serial.println(WiFi.localIP());
-
-   //  	delay(5000);
-   //     	udp.begin(8001);	//
-   //     }
-   // }
 }
 
+void blinkingLED(int interval){
+	if(millis() - lastLEDStateChangedTimer > interval){
+		ledState = !ledState;
+		lastLEDStateChangedTimer = millis();
+	}
+	digitalWrite(LED, ledState);
+}
 
+void sendOSCMessage(String addrPattern, int value){
+	OSCMessage message(addrPattern);
+	message.addString(int2String(value));
+	message.send(udp, outIP, outPort);
+	delay(10);	
+}
 
 String int2String(int num){
 	char message[64] = "";
@@ -131,9 +79,14 @@ String int2String(int num){
 	return message;
 }
 
-
 String double2String(unsigned long num){
 	char message[64] = "";
 	sprintf(message, "%lu", num);
+	return message;
+}
+
+String float2String(float num){
+	char message[64] = "";
+	sprintf(message, "%f", num);
 	return message;
 }
